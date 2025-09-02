@@ -124,6 +124,7 @@ class ClusterTable(BaseTable):
 class VirtualMachineTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    platform = tables.Column(linkify=True)
     cluster = tables.Column(linkify=True)
     tenant = TenantColumn()
     actions = ButtonsColumn(VirtualMachine)

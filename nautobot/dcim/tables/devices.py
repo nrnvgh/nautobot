@@ -166,6 +166,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
         verbose_name="Type",
         text=lambda record: record.device_type.display,
     )
+    platform = tables.Column(linkify=True)
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
