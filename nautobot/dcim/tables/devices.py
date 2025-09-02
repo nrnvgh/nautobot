@@ -169,7 +169,7 @@ class DeviceTable(StatusTableMixin, RoleTableMixin, BaseTable):
     primary_ip = tables.Column(linkify=True, order_by=("primary_ip6", "primary_ip4"), verbose_name="IP Address")
     primary_ip4 = tables.Column(linkify=True, verbose_name="IPv4 Address")
     primary_ip6 = tables.Column(linkify=True, verbose_name="IPv6 Address")
-    cluster = tables.LinkColumn(viewname="virtualization:cluster", args=[Accessor("cluster__pk")])
+    cluster = tables.Column(linkify=True)
     virtual_chassis = tables.LinkColumn(viewname="dcim:virtualchassis", args=[Accessor("virtual_chassis__pk")])
     vc_position = tables.Column(verbose_name="VC Position")
     vc_priority = tables.Column(verbose_name="VC Priority")
