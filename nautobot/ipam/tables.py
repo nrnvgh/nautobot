@@ -218,6 +218,7 @@ class NamespaceTable(BaseTable):
 class VRFTable(StatusTableMixin, BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
+    namespace = tables.Column(linkify=True)
     rd = tables.Column(verbose_name="RD")
     tenant = TenantColumn()
     import_targets = tables.TemplateColumn(template_code=VRF_TARGETS, orderable=False)
