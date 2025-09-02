@@ -203,6 +203,7 @@ class NamespaceTable(BaseTable):
     pk = ToggleColumn()
     name = tables.LinkColumn()
     tags = TagColumn(url_name="ipam:namespace_list")
+    location = tables.Column(linkify=True)
 
     class Meta(BaseTable.Meta):
         model = Namespace
