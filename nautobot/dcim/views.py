@@ -66,9 +66,9 @@ from nautobot.core.views.mixins import (
     ObjectPermissionRequiredMixin,
 )
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
+from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
-from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings
@@ -271,21 +271,21 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 
 class TimedNautobotHTMLRenderer(NautobotHTMLRenderer):
     """Temporary renderer for timing Django template performance."""
-    
+
     def render(self, data, accepted_media_type=None, renderer_context=None):
         import time
-        
+
         start_time = time.time()
         print("Django Retrieve called")
-        
+
         # Call parent render (does actual template rendering)
         result = super().render(data, accepted_media_type, renderer_context)
-        
+
         render_time = time.time()
         print(f"Rendered template in {render_time - start_time:.3f}s")
-        print(f"Total time: {render_time - start_time:.3f}s") 
+        print(f"Total time: {render_time - start_time:.3f}s")
         print("Engine class: Django Templates")
-        
+
         return result
 
 
