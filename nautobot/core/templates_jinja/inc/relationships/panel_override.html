@@ -1,0 +1,13 @@
+{# Jinja2 version of inc/relationships/panel_override.html for performance comparison POC #}
+{% set relationships = relationships_fields_override %}
+{% if relationships and (relationships.source or relationships.destination or relationships.peer) %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Relationships</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            {# Would include relationships table rows here #}
+            <tr><td colspan="2">Relationships would be displayed here</td></tr>
+        </table>
+    </div>
+{% endif %}

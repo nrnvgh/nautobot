@@ -38,6 +38,8 @@ urlpatterns = [
     path("circuits/", include("nautobot.circuits.urls")),
     path("cloud/", include("nautobot.cloud.urls")),
     path("dcim/", include("nautobot.dcim.urls")),
+    # Jinja2 template comparison URLs
+    path("jinja/dcim/", include("nautobot.dcim.urls_jinja")),
     path("extras/", include("nautobot.extras.urls")),
     path("ipam/", include("nautobot.ipam.urls")),
     path("tenancy/", include("nautobot.tenancy.urls")),

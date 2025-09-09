@@ -225,6 +225,8 @@ yamllint = "~1.37.1"
 [tool.poetry.group.testing.dependencies]
 # Test code coverage measurement - pinned to 6.4.0 to resolve https://github.com/nedbat/coveragepy/issues/1420
 coverage = "<=6.4.0"
+# Python profiler for performance testing
+pyinstrument = "~5.1.1"
 # Testing of data migrations
 django-test-migrations = "~1.4.0"
 # OpenAPI validator to test that our generated schema is valid

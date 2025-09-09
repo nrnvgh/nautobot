@@ -1,0 +1,16 @@
+{# Jinja2 version of extras/inc/tags_panel.html for performance comparison POC #}
+{% set tags = object.tags %}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <strong>Tags</strong>
+    </div>
+    <div class="panel-body">
+        {% if tags.all() %}
+            {% for tag in tags.all() %}
+                <span class="label label-default" style="background-color: {{ tag.color }}">{{ tag.name }}</span>
+            {% endfor %}
+        {% else %}
+            <span class="text-muted">No tags assigned</span>
+        {% endif %}
+    </div>
+</div>

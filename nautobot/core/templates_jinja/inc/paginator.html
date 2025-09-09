@@ -1,0 +1,26 @@
+{# Jinja2 version of inc/paginator.html for performance comparison POC #}
+{% if paginator and paginator.num_pages > 1 %}
+    <nav aria-label="Table pagination">
+        <ul class="pagination">
+            {% if page.has_previous() %}
+                <li><a href="?page=1" aria-label="First">&laquo;&laquo; First</a></li>
+                <li><a href="?page={{ page.previous_page_number() }}" aria-label="Previous">&laquo; Previous</a></li>
+            {% else %}
+                <li class="disabled"><span>&laquo;&laquo; First</span></li>
+                <li class="disabled"><span>&laquo; Previous</span></li>
+            {% endif %}
+
+            <li class="disabled">
+                <span>Page {{ page.number }} of {{ paginator.num_pages }}</span>
+            </li>
+
+            {% if page.has_next() %}
+                <li><a href="?page={{ page.next_page_number() }}" aria-label="Next">Next &raquo;</a></li>
+                <li><a href="?page={{ paginator.num_pages }}" aria-label="Last">Last &raquo;&raquo;</a></li>
+            {% else %}
+                <li class="disabled"><span>Next &raquo;</span></li>
+                <li class="disabled"><span>Last &raquo;&raquo;</span></li>
+            {% endif %}
+        </ul>
+    </nav>
+{% endif %}

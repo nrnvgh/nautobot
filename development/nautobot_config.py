@@ -21,11 +21,18 @@ DEBUG = is_truthy(os.getenv("NAUTOBOT_DEBUG", "True"))
 if DEBUG:
     if "debug_toolbar" not in INSTALLED_APPS:  # noqa: F405
         INSTALLED_APPS.append("debug_toolbar")  # noqa: F405
+        
     if "debug_toolbar.middleware.DebugToolbarMiddleware" not in MIDDLEWARE:  # noqa: F405
         MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")  # noqa: F405
+
+    # PyInstrument profiler - enabled only when debugging
+    if "pyinstrument.middleware.ProfilerMiddleware" not in MIDDLEWARE:  # noqa: F405
+        MIDDLEWARE.insert(1, "pyinstrument.middleware.ProfilerMiddleware")  # noqa: F405
+
     # By default the toolbar only displays when the request is coming from one of INTERNAL_IPS.
     # For the Docker dev environment, we don't know in advance what that IP may be, so override to skip that check
     DEBUG_TOOLBAR_CONFIG = {"SHOW_TOOLBAR_CALLBACK": lambda _request: DEBUG}
+
 
 # Do *not* send anonymized install metrics when post_upgrade or send_installation_metrics management commands are run
 INSTALLATION_METRICS_ENABLED = is_truthy(os.getenv("NAUTOBOT_INSTALLATION_METRICS_ENABLED", "False"))

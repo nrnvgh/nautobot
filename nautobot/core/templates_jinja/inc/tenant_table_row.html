@@ -1,0 +1,10 @@
+{# Jinja2 version of tenant_table_row.html for performance comparison POC #}
+<tr>
+    <td>Tenant</td>
+    <td>
+        {% if object.tenant and object.tenant.tenant_group %}
+            {{ object.tenant.tenant_group|hyperlinked_object }} /
+        {% endif %}
+        {{ object.tenant|hyperlinked_object }}
+    </td>
+</tr>

@@ -68,6 +68,7 @@ from nautobot.core.views.mixins import (
 from nautobot.core.views.paginator import EnhancedPaginator, get_paginate_count
 from nautobot.core.views.utils import get_obj_from_context
 from nautobot.core.views.viewsets import NautobotUIViewSet
+from nautobot.core.views.renderers import NautobotHTMLRenderer
 from nautobot.dcim.choices import LocationDataToContactActionChoices
 from nautobot.dcim.forms import LocationMigrateDataToContactForm
 from nautobot.dcim.utils import get_all_network_driver_mappings
@@ -268,6 +269,26 @@ class LocationTypeUIViewSet(NautobotUIViewSet):
 #
 
 
+class TimedNautobotHTMLRenderer(NautobotHTMLRenderer):
+    """Temporary renderer for timing Django template performance."""
+    
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        import time
+        
+        start_time = time.time()
+        print("Django Retrieve called")
+        
+        # Call parent render (does actual template rendering)
+        result = super().render(data, accepted_media_type, renderer_context)
+        
+        render_time = time.time()
+        print(f"Rendered template in {render_time - start_time:.3f}s")
+        print(f"Total time: {render_time - start_time:.3f}s") 
+        print("Engine class: Django Templates")
+        
+        return result
+
+
 class LocationUIViewSet(NautobotUIViewSet):
     # We are only accessing the tree fields from the list view, where `with_tree_fields` is called dynamically
     # depending on whether the hierarchy is shown in the UI (note that `parent` itself is a normal foreign key, not a
@@ -275,6 +296,7 @@ class LocationUIViewSet(NautobotUIViewSet):
     # automatically issue a second query (similar to behavior for
     # https://docs.djangoproject.com/en/3.2/ref/models/querysets/#django.db.models.query.QuerySet.only).
     queryset = Location.objects.without_tree_fields().select_related("location_type", "parent", "tenant")
+    renderer_classes = [TimedNautobotHTMLRenderer]  # Use timed renderer for performance comparison
     filterset_class = filters.LocationFilterSet
     filterset_form_class = forms.LocationFilterForm
     table_class = tables.LocationTable

@@ -1,0 +1,96 @@
+{# Jinja2 version of inc/object_details_advanced_panel.html for performance comparison POC #}
+{% if object.pk %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Object Details</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                <tr>
+                    <td>UUID</td>
+                    <td>
+                        <span class="hover_copy">
+                            <span id="uuid_copy">{{ object.id }}</span>
+                            <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#uuid_copy">
+                                <span class="mdi mdi-content-copy"></span>
+                            </button>
+                        </span>
+                    </td>
+                </tr>
+                {% if object.natural_slug %}
+                    <tr>
+                        <td>Natural Slug</td>
+                        <td>
+                            <span class="hover_copy">
+                                <span id="natural_slug_copy">{{ object.natural_slug }}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#natural_slug_copy">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                {% endif %}
+                {% if object.slug %}
+                    <tr>
+                        <td>Slug</td>
+                        <td>
+                            <span class="hover_copy">
+                                <span id="slug_copy">{{ object.slug }}</span>
+                                <button class="btn btn-inline btn-default hover_copy_button" data-clipboard-target="#slug_copy">
+                                    <span class="mdi mdi-content-copy"></span>
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Data Provenance</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tbody>
+                {% if object.created %}
+                    <tr>
+                        <td>Created</td>
+                        <td>{{ object.created|date("DATETIME_FORMAT") if object.created else "—" }}</td>
+                    </tr>
+                {% endif %}
+                {% if object.last_updated %}
+                    <tr>
+                        <td>Updated</td>
+                        <td>{{ object.last_updated|date("DATETIME_FORMAT") if object.last_updated else "—" }}</td>
+                    </tr>
+                {% endif %}
+                <tr>
+                    <td>Created By</td>
+                    <td>{{ created_by|placeholder }}</td>
+                </tr>
+                <tr>
+                    <td>Last Updated By</td>
+                    <td>{{ last_updated_by|placeholder }}</td>
+                </tr>
+                {% set api_view = "dcim-api:location-detail" %}
+                {% if api_view %}
+                    <tr>
+                        <td>View in API Browser</td>
+                        <td>
+                            <a href="/api/dcim/locations/{{ object.id }}/" target="_blank">
+                                <span class="mdi mdi-open-in-new"></span>
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+    {% set custom_fields = custom_fields_advanced %}
+    {% set computed_fields = computed_fields_advanced %}
+    {% set custom_fields_advanced_ui = true %}
+    {% include 'inc/custom_fields/panel.html' %}
+    
+    {% set relationships_fields_override = relationships_advanced %}
+    {% include 'inc/relationships/panel_override.html' %}
+{% endif %}

@@ -1,0 +1,55 @@
+{# Jinja2 version of inc/nav_menu.html for performance comparison POC #}
+<nav class="navbar navbar-default navbar-fixed-left navbar-inverse">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <a class="navbar-brand" href="/">
+                <img src="/static/img/nautobot_logo.svg" height="30" />
+                <small style="color: #ff6600; font-weight: bold; margin-left: 10px;">JINJA2 ENGINE</small>
+            </a>
+        </div>
+
+        <div id="navbar">
+            {% if request.user.is_authenticated %}
+                <form action="/search/" method="get" class="navbar-form" id="navbar_search" role="search">
+                    <div class="input-group">
+                        <input type="text" name="q" class="form-control" placeholder="Search {{ settings.BRANDING_TITLE }}">
+                        <span class="input-group-btn">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="mdi mdi-magnify"></i>
+                            </button>
+                        </span>
+                    </div>
+                </form>
+            {% endif %}
+
+            <ul class="nav navbar-nav">
+                {% if request.user.is_authenticated %}
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <i class="mdi mdi-package-variant-closed"></i>
+                            <span>Organization</span>
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a href="/dcim/locations/"><span>Locations</span></a></li>
+                        </ul>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+        
+        <div class="navbar-user">
+            <ul class="nav navbar-nav navbar-right">
+                {% if request.user.is_authenticated %}
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                            <i class="mdi mdi-account"></i>
+                            <span>{{ user.username }} <small>(Jinja2 POC)</small></span>
+                            <span class="caret"></span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>

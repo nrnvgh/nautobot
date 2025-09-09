@@ -622,7 +622,11 @@ TEMPLATES = [
     {
         "NAME": "jinja",
         "BACKEND": "django_jinja.backend.Jinja2",
-        "DIRS": [],
+        "DIRS": [
+            # Jinja2 template directories for performance comparison POC
+            os.path.join(BASE_DIR, "dcim", "templates_jinja"),
+            os.path.join(BASE_DIR, "core", "templates_jinja"),
+        ],
         "APP_DIRS": False,
         "OPTIONS": {
             "context_processors": [
@@ -636,7 +640,32 @@ TEMPLATES = [
                 "nautobot.core.context_processors.settings",
                 "nautobot.core.context_processors.sso_auth",
             ],
-            "environment": "jinja2.sandbox.SandboxedEnvironment",
+            #"environment": "jinja2.sandbox.SandboxedEnvironment",
+            "environment": "jinja2.Environment",
+        },
+    },
+    {
+        "NAME": "jinja_poc",
+        "BACKEND": "django_jinja.backend.Jinja2",
+        "DIRS": [
+            # Jinja2 template directories for performance comparison POC
+            os.path.join(BASE_DIR, "dcim", "templates_jinja"),
+            os.path.join(BASE_DIR, "core", "templates_jinja"),
+        ],
+        "APP_DIRS": False,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.template.context_processors.media",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
+                "nautobot.core.context_processors.settings",
+                "nautobot.core.context_processors.sso_auth",
+            ],
+            "environment": "jinja2.Environment",  # No sandbox for performance testing
         },
     },
 ]
