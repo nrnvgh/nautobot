@@ -906,7 +906,7 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
 
     def validate(self, attrs):
-        """Ensure either context OR object fields are provided, but not both."""
+        """Ensure either context or object fields are provided, but not both."""
         has_context = "context" in attrs  # Check presence, not truthiness (allows empty {})
 
         # Check for meaningful object fields (not just presence)
