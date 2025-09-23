@@ -901,10 +901,10 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
     rendered_template = serializers.CharField(read_only=True)
     rendered_template_lines = serializers.ListField(read_only=True, child=serializers.CharField())
 
-    def validate(self, data):
+    def validate(self, attrs):
         """Ensure either context OR object fields are provided, but not both."""
-        has_context = bool(data.get("context"))
-        has_object = bool(data.get("content_type") and data.get("object_uuid"))
+        has_context = bool(attrs.get("context"))
+        has_object = bool(attrs.get("content_type") and attrs.get("object_uuid"))
 
         if not has_context and not has_object:
             raise ValidationError(
@@ -914,4 +914,4 @@ class RenderJinjaSerializer(serializers.Serializer):  # pylint: disable=abstract
         if has_context and has_object:
             raise ValidationError("Cannot specify both 'context' and object selection. Choose one approach.")
 
-        return data
+        return attrs
