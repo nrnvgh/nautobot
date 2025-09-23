@@ -999,11 +999,11 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
             # Object-based context
             try:
                 context = self._build_object_context(request, data.validated_data)
-            except (AttributeError, ContentType.DoesNotExist, ValidationError, ValueError) as exc:
+            except ValidationError as exc:
                 raise RenderJinjaError(f"Failed to build object context: {exc}") from exc
         else:
             # JSON-based context (existing functionality)
-            context = data.validated_data.get("context", {})
+            context = data.validated_data.get("context") or {}
 
         try:
             rendered_template = render_jinja2(template_code, context)
@@ -1025,9 +1025,8 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
 
     def _build_object_context(self, request, validated_data):
         """Build Jinja context from selected object, following Custom Links pattern."""
-        # Parse content type for efficient direct model lookup
-        app_label, model = validated_data["content_type"].split(".")
-        content_type_obj = ContentType.objects.get(app_label=app_label, model=model)
+        # ContentTypeField already provides ContentType instance
+        content_type_obj = validated_data["content_type"]
 
         # Fetch object with proper error handling
         try:
