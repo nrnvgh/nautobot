@@ -44,6 +44,7 @@ from nautobot.core.api.utils import get_serializer_for_model
 from nautobot.core.celery import app as celery_app
 from nautobot.core.exceptions import FilterSetFieldNotFound
 from nautobot.core.models.fields import TagsField
+from nautobot.core.models.utils import serialize_object_v2
 from nautobot.core.utils.data import is_uuid, render_jinja2
 from nautobot.core.utils.filtering import get_all_lookup_expr_for_field, get_filterset_parameter_form_field
 from nautobot.core.utils.lookup import get_form_for_model
@@ -1047,48 +1048,22 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
 
     def _make_context_serializable(self, context):
         """Create a JSON-serializable version of the context for API response."""
-        from nautobot.core.models.utils import serialize_object_v2
-
         serializable_context = {}
 
         for key, value in context.items():
-            if key == "obj":
-                # Serialize the object using Nautobot's serializer
-                try:
-                    serializable_context[key] = serialize_object_v2(value)
-                except Exception:
-                    # Fallback to basic representation if serialization fails
-                    serializable_context[key] = str(value)
-            elif key == "request":
-                # Skip the request object entirely as it's not serializable
-                continue
-            elif key == "user":
-                # Convert user to a simple representation
-                if hasattr(value, "username"):
-                    serializable_context[key] = {
-                        "username": value.username,
-                        "is_authenticated": value.is_authenticated,
-                        "is_staff": value.is_staff,
-                        "is_superuser": value.is_superuser,
-                    }
-                else:
-                    serializable_context[key] = str(value)
+            if key in ("obj", "user"):
+                serializable_context[key] = serialize_object_v2(value)
             elif key == "perms":
-                # Convert permissions to a list
-                if hasattr(value, "__iter__"):
-                    serializable_context[key] = list(value) if value else []
-                else:
-                    serializable_context[key] = []
+                # Convert permissions set to list (always works)
+                serializable_context[key] = list(value)
+            elif key == "debug":
+                # Boolean value, always serializable
+                serializable_context[key] = value
+            elif key == "request":
+                continue
             else:
-                # For other simple types (debug, etc.)
-                try:
-                    # Test if it's JSON serializable
-                    import json
-
-                    json.dumps(value)
-                    serializable_context[key] = value
-                except (TypeError, ValueError):
-                    # If not serializable, convert to string
-                    serializable_context[key] = str(value)
+                # Log unexpected keys for debugging
+                logger.warning(f"Unexpected context key in object mode: {key}")
+                serializable_context[key] = str(value)
 
         return serializable_context
