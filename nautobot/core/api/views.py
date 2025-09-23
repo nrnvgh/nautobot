@@ -1003,7 +1003,7 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
             except ValidationError as exc:
                 raise RenderJinjaError(f"Failed to build object context: {exc}") from exc
         else:
-            # JSON-based context (existing functionality)
+            # JSON-based context
             context = data.validated_data.get("context") or {}
 
         try:
@@ -1012,7 +1012,6 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
             raise RenderJinjaError(f"Failed to render Jinja template: {exc}") from exc
 
         # Create a serializable version of context for the API response
-        # Remove non-serializable objects like request, user, etc.
         serializable_context = self._make_context_serializable(context)
 
         return Response(
@@ -1028,11 +1027,12 @@ class RenderJinjaView(NautobotAPIVersionMixin, GenericAPIView):
         """Build Jinja context from selected object, following Custom Links pattern."""
         # ContentTypeField already provides ContentType instance
         content_type_obj = validated_data["content_type"]
+        content_type_obj_model_class = content_type_obj.model_class()
 
         # Fetch object with proper error handling
         try:
-            obj = content_type_obj.model_class().objects.get(pk=validated_data["object_uuid"])
-        except content_type_obj.model_class().DoesNotExist:
+            obj = content_type_obj_model_class.objects.get(pk=validated_data["object_uuid"])
+        except content_type_obj_model_class.DoesNotExist:
             raise ValidationError(f"Object not found: {validated_data['object_uuid']}")
 
         # Build context following Custom Links/Job Buttons pattern
