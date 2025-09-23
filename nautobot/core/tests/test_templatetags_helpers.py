@@ -338,4 +338,3 @@ class NautobotTemplatetagsHelperTest(TestCase):
             "-85 dBm",
         )
         self.assertEqual(helpers.dbm(None), helpers.placeholder(None))
-
