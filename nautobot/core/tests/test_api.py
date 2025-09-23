@@ -997,7 +997,7 @@ class RenderJinjaViewTest(testing.APITestCase):
             ("dcim.device", dcim_models.Device.objects.first(), "Device: {{ obj.name }}"),
             ("dcim.interface", dcim_models.Interface.objects.first(), "Interface: {{ obj.name }}"),
         ]
-        
+
         for content_type, obj, template_code in test_cases:
             with self.subTest(content_type=content_type):
                 response = self.client.post(
@@ -1010,17 +1010,17 @@ class RenderJinjaViewTest(testing.APITestCase):
                     format="json",
                     **self.header,
                 )
-                
+
                 self.assertEqual(response.status_code, status.HTTP_200_OK)
                 self.assertSequenceEqual(
                     list(response.data.keys()),
                     ["rendered_template", "rendered_template_lines", "template_code", "context"],
                 )
-                
+
                 expected_response = f"{content_type.split('.')[1].title()}: {obj.name}"
                 self.assertEqual(response.data["rendered_template"], expected_response)
                 self.assertEqual(response.data["rendered_template_lines"], expected_response.split("\n"))
-                
+
                 # Verify context contains expected object data
                 self.assertIn("obj", response.data["context"])
                 self.assertEqual(response.data["context"]["obj"]["name"], obj.name)
@@ -1031,14 +1031,16 @@ class RenderJinjaViewTest(testing.APITestCase):
         """
         # Use existing location from test database
         location = dcim_models.Location.objects.first()
-        
-        template_code = "\n".join([
-            "Object: {{ obj.name }}",
-            "User: {{ user.username }}",
-            "Debug: {{ debug }}",
-            "Has perms: {{ perms|length > 0 }}",
-        ])
-        
+
+        template_code = "\n".join(
+            [
+                "Object: {{ obj.name }}",
+                "User: {{ user.username }}",
+                "Debug: {{ debug }}",
+                "Has perms: {{ perms|length > 0 }}",
+            ]
+        )
+
         response = self.client.post(
             reverse("core-api:render_jinja_template"),
             {
@@ -1049,16 +1051,16 @@ class RenderJinjaViewTest(testing.APITestCase):
             format="json",
             **self.header,
         )
-        
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        
+
         # Verify context contains all expected variables
         context = response.data["context"]
         self.assertIn("obj", context)
         self.assertIn("user", context)
         self.assertIn("debug", context)
         self.assertIn("perms", context)
-        
+
         # Verify context structure
         self.assertEqual(context["obj"]["name"], location.name)
         self.assertEqual(context["user"]["username"], self.user.username)
@@ -1099,7 +1101,7 @@ class RenderJinjaViewTest(testing.APITestCase):
             {"content_type": "dcim.location"},  # Missing object_uuid
             {"object_uuid": str(uuid.uuid4())},  # Missing content_type
         ]
-        
+
         for data in test_cases:
             with self.subTest(data):
                 data["template_code"] = "{{ obj.name }}"
@@ -1119,7 +1121,7 @@ class RenderJinjaViewTest(testing.APITestCase):
             "nonexistent.model": "matching query does not exist",  # App doesn't exist
             "dcim.nonexistent": "matching query does not exist",  # Model doesn't exist
         }
-        
+
         for content_type, expected_error in test_cases.items():
             with self.subTest(content_type=content_type):
                 response = self.client.post(
@@ -1154,7 +1156,7 @@ class RenderJinjaViewTest(testing.APITestCase):
     def test_render_jinja_template_wrong_object_type(self):
         """Test error when valid content_type and UUID but UUID is for different object type."""
         location = dcim_models.Location.objects.first()
-        
+
         # Try to get a Device using a Location's UUID
         response = self.client.post(
             reverse("core-api:render_jinja_template"),
