@@ -98,6 +98,7 @@ from .choices import (
     PowerPanelTypeChoices,
     PowerPathChoices,
     PowerPortTypeChoices,
+    TransceiverFormFactorChoices,
     RackDimensionUnitChoices,
     RackTypeChoices,
     RackWidthChoices,
@@ -155,6 +156,10 @@ from .models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
+    Transceiver,
+    TransceiverPort,
+    TransceiverType,
+    TransceiverPortTemplate,
 )
 
 logger = logging.getLogger(__name__)
@@ -197,6 +202,56 @@ class DeviceComponentFilterForm(NautobotFilterForm):
         label="Device",
         query_params={"location": "$location"},
     )
+
+
+# --- Transceivers: Forms ---
+
+
+class TransceiverTypeForm(NautobotModelForm):
+    class Meta:
+        model = TransceiverType
+        fields = "__all__"
+
+
+class TransceiverTypeFilterForm(NautobotFilterForm):
+    model = TransceiverType
+
+
+class TransceiverTypeBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=TransceiverType.objects.all(), widget=forms.MultipleHiddenInput())
+
+
+class TransceiverForm(RoleNotRequiredModelFormMixin, LocatableModelFormMixin, NautobotModelForm):
+    model = Transceiver
+    class Meta:
+        model = Transceiver
+        fields = "__all__"
+
+
+class TransceiverFilterForm(LocatableModelFilterFormMixin, RoleModelFilterFormMixin, StatusModelFilterFormMixin, NautobotFilterForm):
+    model = Transceiver
+
+
+class TransceiverBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=Transceiver.objects.all(), widget=forms.MultipleHiddenInput())
+
+
+
+
+class TransceiverPortFilterForm(NautobotFilterForm):
+    model = TransceiverPort
+
+
+class TransceiverPortBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=TransceiverPort.objects.all(), widget=forms.MultipleHiddenInput())
+
+
+class TransceiverPortTemplateFilterForm(NautobotFilterForm):
+    model = TransceiverPortTemplate
+
+
+class TransceiverPortTemplateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=TransceiverPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
 
 
 class ModularDeviceComponentFilterForm(DeviceComponentFilterForm):
@@ -5767,3 +5822,74 @@ class VirtualDeviceContextFilterForm(
         widget=StaticSelect2(choices=BOOLEAN_WITH_BLANK_CHOICES),
     )
     tags = TagFilterField(model)
+
+#
+# Transceivers
+#
+#
+# XXX we /might/ want to inherit from ModuleBayBaseCreateForm here.
+class TransceiverPortTemplateCreateForm(ModularComponentTemplateCreateForm):
+    required_form_factor = forms.ChoiceField(
+        choices=add_blank_choice(TransceiverFormFactorChoices), required=False, widget=StaticSelect2()
+    )
+
+    position_pattern = AutoPositionPatternField(
+        required=False,
+        help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
+        " Default to the names of the transceiver ports unless manually supplied by the user.",
+    )
+    field_order = (
+        "device_type",
+        "module_family",
+        "module_type",
+        "name_pattern",
+        "label_pattern",
+        "required_form_factor",
+        "position_pattern",
+        "description",
+    )
+
+
+class TransceiverPortTemplateForm(ModularComponentTemplateForm):
+    class Meta:
+        model = TransceiverPortTemplate
+        fields = [
+            "device_type",
+            "module_type",
+            "name",
+            "label",
+            "required_form_factor",
+            "position",
+            "description",
+        ]
+
+
+class TransceiverPortForm(ModularComponentEditForm):
+    class Meta:
+        model = TransceiverPort
+        fields = [
+            "parent_device",
+            "parent_module",
+            "name",
+            "label",
+            "position",
+            "description",
+            "required_form_factor",
+        ]
+
+
+class TransceiverPortCreateForm(ModularComponentCreateForm):
+    required_form_factor = forms.ChoiceField(
+        choices=add_blank_choice(TransceiverFormFactorChoices), required=False, widget=StaticSelect2()
+    )
+    field_order = (
+        "device",
+        "module_family",
+        "module",
+        "name_pattern",
+        "label_pattern",
+        "position_pattern",
+        "required_form_factor",
+        "description",
+        "tags",
+    )

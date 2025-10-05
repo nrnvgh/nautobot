@@ -35,6 +35,9 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
+    Transceiver,
+    TransceiverPort,
+    TransceiverType,
 )
 from nautobot.dcim.utils import cable_status_color_css
 from nautobot.extras.tables import RoleTableMixin, StatusTableMixin
@@ -98,6 +101,9 @@ __all__ = (
     "SoftwareVersionTable",
     "VirtualChassisTable",
     "VirtualDeviceContextTable",
+    "TransceiverTypeTable",
+    "TransceiverTable",
+    "TransceiverPortTable",
 )
 
 
@@ -1591,4 +1597,85 @@ class VirtualDeviceContextTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "tenant",
             "primary_ip",
             "interface_count",
+        )
+
+
+#
+# Transceivers
+#
+
+
+class TransceiverTypeTable(BaseTable):
+    pk = ToggleColumn()
+    manufacturer = tables.Column(linkify=True)
+    model = tables.Column(linkify=True)
+    phy_specification = tables.Column(verbose_name="PHY")
+    form_factor = tables.Column()
+    speed_gbps = tables.Column(verbose_name="Speed (G)")
+    lane_count = tables.Column(verbose_name="Lanes")
+    tags = TagColumn(url_name="dcim:transceivertype_list")
+
+    class Meta(BaseTable.Meta):
+        model = TransceiverType
+        fields = (
+            "pk",
+            "manufacturer",
+            "model",
+            "phy_specification",
+            "form_factor",
+            "type",
+            "speed_gbps",
+            "medium",
+            "lane_count",
+            "part_number",
+            "tags",
+        )
+
+
+class TransceiverTable(StatusTableMixin, RoleTableMixin, BaseTable):
+    pk = ToggleColumn()
+    transceiver_type = tables.Column(linkify=True)
+    phy_specification = tables.Column(accessor="transceiver_type__phy_specification", verbose_name="PHY")
+    parent_transceiver_port = tables.Column(linkify=True)
+    location = tables.Column(linkify=True)
+    tenant = TenantColumn()
+    tags = TagColumn(url_name="dcim:transceiver_list")
+
+    class Meta(BaseTable.Meta):
+        model = Transceiver
+        fields = (
+            "pk",
+            "transceiver_type",
+            "phy_specification",
+            "parent_transceiver_port",
+            "location",
+            "status",
+            "role",
+            "tenant",
+            "serial",
+            "asset_tag",
+            "tags",
+        )
+
+
+class TransceiverPortTable(BaseTable):
+    pk = ToggleColumn()
+    parent_device = tables.Column(linkify=True)
+    parent_module = tables.Column(linkify=True)
+    name = tables.Column(linkify=True, order_by=("_name",))
+    installed_transceiver = tables.Column(linkify=True)
+    required_form_factor = tables.Column()
+    tags = TagColumn(url_name="dcim:transceiverport_list")
+
+    class Meta(BaseTable.Meta):
+        model = TransceiverPort
+        fields = (
+            "pk",
+            "parent_device",
+            "parent_module",
+            "name",
+            "installed_transceiver",
+            "required_form_factor",
+            "description",
+            "tags",
         )

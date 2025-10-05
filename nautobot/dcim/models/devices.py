@@ -23,7 +23,11 @@ from nautobot.dcim.choices import (
     ControllerCapabilitiesChoices,
     DeviceFaceChoices,
     DeviceRedundancyGroupFailoverStrategyChoices,
+    PortTypeChoices,
     SoftwareImageFileHashingAlgorithmChoices,
+    TransceiverFormFactorChoices,
+    TransceiverMediumChoices,
+    TransceiverSpeedChoices,
     SubdeviceRoleChoices,
 )
 from nautobot.dcim.constants import MODULE_RECURSION_DEPTH_LIMIT
@@ -2036,6 +2040,164 @@ class Module(PrimaryModel):
         """
         return Module.objects.filter(parent_module_bay__parent_module=self)
 
+
+#
+# Transceivers
+#
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "webhooks",
+)
+class TransceiverType(PrimaryModel):
+    """Optical transceiver module specifications."""
+
+    manufacturer = models.ForeignKey(
+        to="dcim.Manufacturer", on_delete=models.PROTECT, related_name="transceiver_types"
+    )
+    module_family = models.ForeignKey(
+        to="dcim.ModuleFamily", on_delete=models.PROTECT, related_name="transceiver_types", blank=True, null=True
+    )
+    model = models.CharField(max_length=CHARFIELD_MAX_LENGTH)
+    part_number = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    comments = models.TextField(blank=True)
+
+    # Physical characteristics
+    form_factor = models.CharField(max_length=50, choices=TransceiverFormFactorChoices)
+    type = models.CharField(max_length=50, choices=PortTypeChoices)
+
+    # PHY specification components
+    speed = models.PositiveIntegerField(choices=TransceiverSpeedChoices)
+    medium = models.CharField(max_length=10, choices=TransceiverMediumChoices)
+    lane_count = models.PositiveSmallIntegerField(default=1, validators=[MinValueValidator(1), MaxValueValidator(16)])
+
+    # Optional overrides
+    actual_reach = models.PositiveIntegerField(blank=True, null=True)
+    power_consumption = models.DecimalField(max_digits=5, decimal_places=2, blank=True, null=True)
+
+    clone_fields = [
+        "manufacturer",
+        "module_family",
+    ]
+
+    class Meta:
+        ordering = ("manufacturer", "model")
+        unique_together = [
+            ("manufacturer", "model"),
+        ]
+
+    def __str__(self):
+        return f"{self.manufacturer} {self.model}"
+
+    @property
+    def speed_mbps(self):
+        """Return speed in Mbps (from kbps)."""
+        return int(self.speed // 1_000)
+
+    @property
+    def speed_gbps(self):
+        """Return speed in Gbps (from kbps)."""
+        return int(self.speed // 1_000_000)
+
+    @property
+    def phy_specification(self):
+        """Auto-generate PHY name like '100GBASE-SR4'."""
+
+        if self.medium == TransceiverMediumChoices.BASE_T:
+            return f"{self.speed_gbps}GBASE-T"
+
+        # Standards mapping: DAC -> CR, AOC -> SR
+        medium_code = self.medium
+        if self.medium == TransceiverMediumChoices.DAC:
+            medium_code = "cr"
+        elif self.medium == TransceiverMediumChoices.AOC:
+            medium_code = "sr"
+        medium_upper = medium_code.upper()
+        lane_suffix = f"{self.lane_count}" if self.lane_count and self.lane_count > 1 else ""
+        return f"{self.speed_gbps}GBASE-{medium_upper}{lane_suffix}"
+
+
+@extras_features(
+    "custom_links",
+    "custom_validators",
+    "export_templates",
+    "graphql",
+    "locations",
+    "statuses",
+    "webhooks",
+)
+class Transceiver(PrimaryModel):
+    """Installed optical transceiver instance."""
+
+    transceiver_type = models.ForeignKey(
+        to="dcim.TransceiverType", on_delete=models.PROTECT, related_name="transceivers"
+    )
+
+    # Installation (TransceiverPort OR Location)
+    parent_transceiver_port = models.OneToOneField(
+        to="dcim.TransceiverPort",
+        on_delete=models.CASCADE,
+        related_name="installed_transceiver",
+        blank=True,
+        null=True,
+    )
+    location = models.ForeignKey(
+        to="dcim.Location", on_delete=models.PROTECT, related_name="transceivers", blank=True, null=True
+    )
+
+    # Lifecycle fields
+    status = StatusField()
+    role = RoleField(blank=True, null=True)
+    tenant = models.ForeignKey(
+        to="tenancy.Tenant", on_delete=models.PROTECT, related_name="transceivers", blank=True, null=True
+    )
+    serial = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, null=True, db_index=True)
+    asset_tag = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True, null=True, unique=True)
+
+    clone_fields = [
+        "transceiver_type",
+        "role",
+        "tenant",
+        "location",
+        "status",
+    ]
+    natural_key_field_names = ["pk"]
+
+    class Meta:
+        ordering = ("parent_transceiver_port", "transceiver_type", "asset_tag", "serial")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["transceiver_type", "serial"], name="dcim_transceiver_transceiver_type_serial_unique"
+            ),
+        ]
+
+    def __str__(self):
+        serial = f" (Serial: {self.serial})" if self.serial else ""
+        asset_tag = f" (Asset Tag: {self.asset_tag})" if self.asset_tag else ""
+        return f"{self.transceiver_type!s}{serial}{asset_tag}"
+
+    @property
+    def device(self):
+        """Get parent Device through transceiver port, if installed."""
+        if self.parent_transceiver_port:
+            return self.parent_transceiver_port.parent
+        return None
+
+    def clean(self):
+        super().clean()
+        if self.parent_transceiver_port and self.location:
+            raise ValidationError("Only one of parent_transceiver_port or location must be set")
+        if not self.parent_transceiver_port and not self.location:
+            raise ValidationError("Either parent_transceiver_port or location must be set")
+
+    @property
+    def phy_specification(self):
+        """Get the PHY specification from the transceiver type."""
+        return self.transceiver_type.phy_specification
 
 #
 # Virtual Device Contexts

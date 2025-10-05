@@ -258,6 +258,44 @@ menu_items = (
                 ),
             ),
             NavMenuGroup(
+                name="Transceivers",
+                weight=225,
+                items=(
+                    NavMenuItem(
+                        link="dcim:transceiver_list",
+                        name="Transceivers",
+                        weight=100,
+                        permissions=[
+                            "dcim.view_transceiver",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:transceiver_add",
+                                permissions=[
+                                    "dcim.add_transceiver",
+                                ],
+                            ),
+                        ),
+                    ),
+                    NavMenuItem(
+                        link="dcim:transceivertype_list",
+                        name="Transceiver Types",
+                        weight=200,
+                        permissions=[
+                            "dcim.view_transceivertype",
+                        ],
+                        buttons=(
+                            NavMenuAddButton(
+                                link="dcim:transceivertype_add",
+                                permissions=[
+                                    "dcim.add_transceivertype",
+                                ],
+                            ),
+                        ),
+                    ),
+                ),
+            ),
+            NavMenuGroup(
                 name="Modules",
                 weight=250,
                 items=(
@@ -520,6 +558,15 @@ menu_items = (
                         weight=800,
                         permissions=[
                             "dcim.view_devicebay",
+                        ],
+                        buttons=(),
+                    ),
+                    NavMenuItem(
+                        link="dcim:transceiverport_list",
+                        name="Transceiver Ports",
+                        weight=825,
+                        permissions=[
+                            "dcim.view_transceiverport",
                         ],
                         buttons=(),
                     ),

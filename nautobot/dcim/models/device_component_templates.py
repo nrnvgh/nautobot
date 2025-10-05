@@ -13,6 +13,7 @@ from nautobot.dcim.choices import (
     ConsolePortTypeChoices,
     InterfaceTypeChoices,
     PortTypeChoices,
+    TransceiverFormFactorChoices,
     PowerOutletFeedLegChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -36,6 +37,7 @@ from .device_components import (
     DeviceBay,
     FrontPort,
     Interface,
+    TransceiverPort,
     ModuleBay,
     PowerOutlet,
     PowerPort,
@@ -49,6 +51,7 @@ __all__ = (
     "FrontPortTemplate",
     "InterfaceTemplate",
     "ModuleBayTemplate",
+    "TransceiverPortTemplate",
     "PowerOutletTemplate",
     "PowerPortTemplate",
     "RearPortTemplate",
@@ -428,6 +431,36 @@ class FrontPortTemplate(ModularComponentTemplateModel):
             type=self.type,
             rear_port=rear_port,
             rear_port_position=self.rear_port_position,
+        )
+
+
+@extras_features("custom_validators")
+class TransceiverPortTemplate(ModularComponentTemplateModel):
+    """Template for transceiver port on DeviceType/ModuleType."""
+
+    position = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    required_form_factor = models.CharField(max_length=50, choices=TransceiverFormFactorChoices, blank=True)
+
+    natural_key_field_names = ["device_type", "module_type", "name"]
+
+    def instantiate(self, device, module=None):
+        custom_field_data = {}
+        content_type = ContentType.objects.get_for_model(TransceiverPort)
+        fields = CustomField.objects.filter(content_types=content_type)
+        for field in fields:
+            custom_field_data[field.key] = field.default
+
+        return TransceiverPort(
+            parent_device=device,
+            parent_module=module,
+            name=self.name,
+            position=self.position,
+            label=self.label,
+            description=self.description,
+            required_form_factor=self.required_form_factor,
+            _custom_field_data=custom_field_data,
         )
 
 

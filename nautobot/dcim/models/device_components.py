@@ -29,6 +29,7 @@ from nautobot.dcim.choices import (
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
     SubdeviceRoleChoices,
+    TransceiverFormFactorChoices,
 )
 from nautobot.dcim.constants import (
     NONCONNECTABLE_IFACE_TYPES,
@@ -58,6 +59,7 @@ __all__ = (
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",
     "InventoryItem",
+    "TransceiverPort",
     "ModuleBay",
     "PathEndpoint",
     "PowerOutlet",
@@ -212,6 +214,54 @@ class ModularComponentModel(ComponentModel):
 
         if not (self.device or self.module):
             raise ValidationError("Either device or module must be set")
+
+
+@extras_features("custom_links", "custom_validators", "export_templates", "graphql", "webhooks")
+class TransceiverPort(PrimaryModel):
+    """Slot for optical transceiver installation (parallel to ModuleBay)."""
+
+    parent_device = ForeignKeyWithAutoRelatedName(
+        to="dcim.Device", on_delete=models.CASCADE, related_name="transceiver_ports", blank=True, null=True
+    )
+    parent_module = ForeignKeyWithAutoRelatedName(
+        to="dcim.Module", on_delete=models.CASCADE, related_name="transceiver_ports", blank=True, null=True
+    )
+
+    required_form_factor = models.CharField(max_length=50, choices=TransceiverFormFactorChoices, blank=True)
+
+    name = models.CharField(max_length=CHARFIELD_MAX_LENGTH, db_index=True)
+    _name = NaturalOrderingField(target_field="name", max_length=CHARFIELD_MAX_LENGTH, blank=True, db_index=True)
+    position = models.CharField(blank=True, max_length=CHARFIELD_MAX_LENGTH)
+    label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+    description = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
+
+    clone_fields = ["parent_device", "parent_module", "required_form_factor"]
+    natural_key_field_names = ["pk"]
+
+    class Meta:
+        ordering = ("parent_device", "parent_module__id", "_name")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["parent_device", "name"], name="dcim_transceiverport_parent_device_name_unique"
+            ),
+            models.UniqueConstraint(
+                fields=["parent_module", "name"], name="dcim_transceiverport_parent_module_name_unique"
+            ),
+        ]
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def parent(self):
+        return self.parent_module.device if self.parent_module else self.parent_device
+
+    def clean(self):
+        super().clean()
+        if self.parent_device and self.parent_module:
+            raise ValidationError("Only one of parent_device or parent_module must be set")
+        if not (self.parent_device or self.parent_module):
+            raise ValidationError("Either parent_device or parent_module must be set")
 
 
 class CableTermination(models.Model):

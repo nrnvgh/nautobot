@@ -22,6 +22,7 @@ from nautobot.dcim.models import (
     PowerOutletTemplate,
     PowerPortTemplate,
     RearPortTemplate,
+    TransceiverPortTemplate,
 )
 
 __all__ = (
@@ -38,6 +39,7 @@ __all__ = (
     "PowerOutletTemplateTable",
     "PowerPortTemplateTable",
     "RearPortTemplateTable",
+    "TransceiverPortTemplateTable",
 )
 
 
@@ -315,6 +317,28 @@ class RearPortTemplateTable(ComponentTemplateTable):
     class Meta(BaseTable.Meta):
         model = RearPortTemplate
         fields = ("pk", "name", "label", "type", "positions", "description", "actions")
+        empty_text = "None"
+
+
+class TransceiverPortTemplateTable(ComponentTemplateTable):
+    actions = ButtonsColumn(
+        model=TransceiverPortTemplate,
+        buttons=("edit", "delete"),
+        # FIXME This doesn't work correctly; ref https://github.com/nautobot/nautobot/issues/7918
+        return_url_extra=r"%3Ftab=transceiverports",
+    )
+
+    class Meta(BaseTable.Meta):
+        model = TransceiverPortTemplate
+        fields = (
+            "pk",
+            "name",
+            "label",
+            "required_form_factor",
+            "position",
+            "description",
+            "actions",
+        )
         empty_text = "None"
 
 

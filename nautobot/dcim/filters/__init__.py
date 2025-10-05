@@ -22,6 +22,9 @@ from nautobot.dcim.choices import (
     CableTypeChoices,
     ConsolePortTypeChoices,
     ControllerCapabilitiesChoices,
+    TransceiverFormFactorChoices,
+    TransceiverMediumChoices,
+    TransceiverSpeedChoices,
     InterfaceTypeChoices,
     PowerOutletTypeChoices,
     PowerPortTypeChoices,
@@ -92,7 +95,38 @@ from nautobot.dcim.models import (
     SoftwareVersion,
     VirtualChassis,
     VirtualDeviceContext,
+    Transceiver,
+    TransceiverPort,
+    TransceiverType,
+    TransceiverPortTemplate,
 )
+
+
+# --- Transceivers: Minimal FilterSets ---
+
+
+class TransceiverTypeFilterSet(BaseFilterSet):
+    class Meta:
+        model = TransceiverType
+        fields = "__all__"
+
+
+class TransceiverFilterSet(BaseFilterSet):
+    class Meta:
+        model = Transceiver
+        fields = "__all__"
+
+
+class TransceiverPortFilterSet(BaseFilterSet):
+    class Meta:
+        model = TransceiverPort
+        fields = "__all__"
+
+
+class TransceiverPortTemplateFilterSet(BaseFilterSet):
+    class Meta:
+        model = TransceiverPortTemplate
+        fields = "__all__"
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,

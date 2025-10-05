@@ -42,6 +42,9 @@ from .devices import (
     VirtualChassisMembersTable,
     VirtualChassisTable,
     VirtualDeviceContextTable,
+    TransceiverTypeTable,
+    TransceiverTable,
+    TransceiverPortTable,
 )
 from .devicetypes import (
     ConsolePortTemplateTable,
@@ -57,6 +60,7 @@ from .devicetypes import (
     PowerOutletTemplateTable,
     PowerPortTemplateTable,
     RearPortTemplateTable,
+    TransceiverPortTemplateTable,
 )
 from .locations import LocationTable, LocationTypeTable
 from .power import PowerFeedTable, PowerPanelTable
@@ -129,6 +133,10 @@ __all__ = (
     "VirtualChassisMembersTable",
     "VirtualChassisTable",
     "VirtualDeviceContextTable",
+    "TransceiverTypeTable",
+    "TransceiverTable",
+    "TransceiverPortTable",
+    "TransceiverPortTemplateTable",
 )
 
 #

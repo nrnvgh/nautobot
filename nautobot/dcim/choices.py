@@ -1650,3 +1650,87 @@ class ControllerCapabilitiesChoices(ChoiceSet):
     WIRELESS = "wireless"
 
     CHOICES = ((WIRELESS, "Wireless"),)
+
+
+#
+# Transceivers
+#
+
+
+class TransceiverFormFactorChoices(ChoiceSet):
+    TYPE_SFP = "sfp"
+    TYPE_SFP_PLUS = "sfp+"
+    TYPE_SFP28 = "sfp28"
+    TYPE_QSFP = "qsfp"
+    TYPE_QSFP_PLUS = "qsfp+"
+    TYPE_QSFP28 = "qsfp28"
+    TYPE_QSFP56 = "qsfp56"
+    TYPE_QSFP_DD = "qsfp-dd"
+    TYPE_OSFP = "osfp"
+    TYPE_CFP = "cfp"
+    TYPE_CFP2 = "cfp2"
+    TYPE_CFP4 = "cfp4"
+
+    CHOICES = (
+        (TYPE_SFP, "SFP"),
+        (TYPE_SFP_PLUS, "SFP+"),
+        (TYPE_SFP28, "SFP28"),
+        (TYPE_QSFP, "QSFP"),
+        (TYPE_QSFP_PLUS, "QSFP+"),
+        (TYPE_QSFP28, "QSFP28"),
+        (TYPE_QSFP56, "QSFP56"),
+        (TYPE_QSFP_DD, "QSFP-DD"),
+        (TYPE_OSFP, "OSFP"),
+        (TYPE_CFP, "CFP"),
+        (TYPE_CFP2, "CFP2"),
+        (TYPE_CFP4, "CFP4"),
+    )
+
+
+class TransceiverSpeedChoices(ChoiceSet):
+    # Values are expressed in kilobits per second (kbps)
+    SPEED_1G = 1_000_000
+    SPEED_10G = 10_000_000
+    SPEED_25G = 25_000_000
+    SPEED_40G = 40_000_000
+    SPEED_50G = 50_000_000
+    SPEED_100G = 100_000_000
+    SPEED_200G = 200_000_000
+    SPEED_400G = 400_000_000
+    SPEED_800G = 800_000_000
+
+    CHOICES = (
+        (SPEED_1G, "1G"),
+        (SPEED_10G, "10G"),
+        (SPEED_25G, "25G"),
+        (SPEED_40G, "40G"),
+        (SPEED_50G, "50G"),
+        (SPEED_100G, "100G"),
+        (SPEED_200G, "200G"),
+        (SPEED_400G, "400G"),
+        (SPEED_800G, "800G"),
+    )
+
+
+class TransceiverMediumChoices(ChoiceSet):
+    SR = "sr"
+    DR = "dr"
+    FR = "fr"
+    LR = "lr"
+    ER = "er"
+    ZR = "zr"
+    DAC = "dac"
+    AOC = "aoc"
+    BASE_T = "t"
+
+    CHOICES = (
+        (SR, "SR - Short Reach (850nm MM)"),
+        (DR, "DR - (1310nm SM, ~500m)"),
+        (FR, "FR - (1310nm SM, ~2km)"),
+        (LR, "LR - Long Reach (1310nm SM)"),
+        (ER, "ER - Extended Reach (1550nm SM)"),
+        (ZR, "ZR - Very Long Reach (1550nm SM)"),
+        (DAC, "DAC - Direct Attach Copper (Twinax)"),
+        (AOC, "AOC - Active Optical Cable"),
+        (BASE_T, "BASE-T - Twisted Pair Copper"),
+    )

@@ -52,6 +52,10 @@ router.register("software-image-files", views.SoftwareImageFileUIViewSet)
 router.register("software-versions", views.SoftwareVersionUIViewSet)
 router.register("virtual-chassis", views.VirtualChassisUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
+router.register("transceiver-types", views.TransceiverTypeUIViewSet)
+router.register("transceivers", views.TransceiverUIViewSet)
+router.register("transceiver-ports", views.TransceiverPortUIViewSet)
+router.register("transceiver-port-templates", views.TransceiverPortTemplateUIViewSet)
 
 urlpatterns = [
     # Locations
@@ -306,6 +310,11 @@ urlpatterns = [
         "device-bay-templates/add/",
         views.DeviceBayTemplateCreateView.as_view(),
         name="devicebaytemplate_add",
+    ),
+    path(
+        "transceiver-port-templates/add/",
+        views.TransceiverPortTemplateCreateView.as_view(),
+        name="transceiverporttemplate_add",
     ),
     path(
         "device-bay-templates/edit/",
@@ -888,6 +897,17 @@ urlpatterns = [
         "devices/rear-ports/add/",
         views.DeviceBulkAddRearPortView.as_view(),
         name="device_bulk_add_rearport",
+    ),
+    # Transceiver Ports 
+    path(
+        "devices/<uuid:pk>/transceiver-ports/add/",
+        RedirectView.as_view(url="/dcim/transceiver-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/transceiver-ports/"),
+        name="device_transceiverports_add",
+    ),
+    path(
+        "transceiver-ports/add/",
+        views.TransceiverPortCreateView.as_view(),
+        name="transceiverport_add",
     ),
     # Device bays
     path("device-bays/", views.DeviceBayListView.as_view(), name="devicebay_list"),
