@@ -157,9 +157,9 @@ from .models import (
     VirtualChassis,
     VirtualDeviceContext,
     Transceiver,
-    TransceiverPort,
+    TransceiverBay,
     TransceiverType,
-    TransceiverPortTemplate,
+    TransceiverBayTemplate,
 )
 
 logger = logging.getLogger(__name__)
@@ -238,20 +238,20 @@ class TransceiverBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
 
 
 
-class TransceiverPortFilterForm(NautobotFilterForm):
-    model = TransceiverPort
+class TransceiverBayFilterForm(NautobotFilterForm):
+    model = TransceiverBay
 
 
-class TransceiverPortBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=TransceiverPort.objects.all(), widget=forms.MultipleHiddenInput())
+class TransceiverBayBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=TransceiverBay.objects.all(), widget=forms.MultipleHiddenInput())
 
 
-class TransceiverPortTemplateFilterForm(NautobotFilterForm):
-    model = TransceiverPortTemplate
+class TransceiverBayTemplateFilterForm(NautobotFilterForm):
+    model = TransceiverBayTemplate
 
 
-class TransceiverPortTemplateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
-    pk = forms.ModelMultipleChoiceField(queryset=TransceiverPortTemplate.objects.all(), widget=forms.MultipleHiddenInput())
+class TransceiverBayTemplateBulkEditForm(TagsBulkEditFormMixin, NautobotBulkEditForm):
+    pk = forms.ModelMultipleChoiceField(queryset=TransceiverBayTemplate.objects.all(), widget=forms.MultipleHiddenInput())
 
 
 class ModularDeviceComponentFilterForm(DeviceComponentFilterForm):
@@ -5828,7 +5828,7 @@ class VirtualDeviceContextFilterForm(
 #
 #
 # XXX we /might/ want to inherit from ModuleBayBaseCreateForm here.
-class TransceiverPortTemplateCreateForm(ModularComponentTemplateCreateForm):
+class TransceiverBayTemplateCreateForm(ModularComponentTemplateCreateForm):
     required_form_factor = forms.ChoiceField(
         choices=add_blank_choice(TransceiverFormFactorChoices), required=False, widget=StaticSelect2()
     )
@@ -5836,7 +5836,7 @@ class TransceiverPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     position_pattern = AutoPositionPatternField(
         required=False,
         help_text="Alphanumeric ranges are supported. (Must match the number of names being created.)"
-        " Default to the names of the transceiver ports unless manually supplied by the user.",
+        " Default to the names of the transceiver bays unless manually supplied by the user.",
     )
     field_order = (
         "device_type",
@@ -5850,9 +5850,9 @@ class TransceiverPortTemplateCreateForm(ModularComponentTemplateCreateForm):
     )
 
 
-class TransceiverPortTemplateForm(ModularComponentTemplateForm):
+class TransceiverBayTemplateForm(ModularComponentTemplateForm):
     class Meta:
-        model = TransceiverPortTemplate
+        model = TransceiverBayTemplate
         fields = [
             "device_type",
             "module_type",
@@ -5864,9 +5864,9 @@ class TransceiverPortTemplateForm(ModularComponentTemplateForm):
         ]
 
 
-class TransceiverPortForm(ModularComponentEditForm):
+class TransceiverBayForm(ModularComponentEditForm):
     class Meta:
-        model = TransceiverPort
+        model = TransceiverBay
         fields = [
             "parent_device",
             "parent_module",
@@ -5878,7 +5878,7 @@ class TransceiverPortForm(ModularComponentEditForm):
         ]
 
 
-class TransceiverPortCreateForm(ModularComponentCreateForm):
+class TransceiverBayCreateForm(ModularComponentCreateForm):
     required_form_factor = forms.ChoiceField(
         choices=add_blank_choice(TransceiverFormFactorChoices), required=False, widget=StaticSelect2()
     )

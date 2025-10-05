@@ -59,7 +59,7 @@ __all__ = (
     "InterfaceRedundancyGroup",
     "InterfaceRedundancyGroupAssociation",
     "InventoryItem",
-    "TransceiverPort",
+    "TransceiverBay",
     "ModuleBay",
     "PathEndpoint",
     "PowerOutlet",
@@ -217,14 +217,14 @@ class ModularComponentModel(ComponentModel):
 
 
 @extras_features("custom_links", "custom_validators", "export_templates", "graphql", "webhooks")
-class TransceiverPort(PrimaryModel):
-    """Slot for optical transceiver installation (parallel to ModuleBay)."""
+class TransceiverBay(PrimaryModel):
+    """Bay/receptacle for optical transceiver installation (parallel to ModuleBay)."""
 
     parent_device = ForeignKeyWithAutoRelatedName(
-        to="dcim.Device", on_delete=models.CASCADE, related_name="transceiver_ports", blank=True, null=True
+        to="dcim.Device", on_delete=models.CASCADE, related_name="transceiver_bays", blank=True, null=True
     )
     parent_module = ForeignKeyWithAutoRelatedName(
-        to="dcim.Module", on_delete=models.CASCADE, related_name="transceiver_ports", blank=True, null=True
+        to="dcim.Module", on_delete=models.CASCADE, related_name="transceiver_bays", blank=True, null=True
     )
 
     required_form_factor = models.CharField(max_length=50, choices=TransceiverFormFactorChoices, blank=True)
@@ -242,10 +242,10 @@ class TransceiverPort(PrimaryModel):
         ordering = ("parent_device", "parent_module__id", "_name")
         constraints = [
             models.UniqueConstraint(
-                fields=["parent_device", "name"], name="dcim_transceiverport_parent_device_name_unique"
+                fields=["parent_device", "name"], name="dcim_transceiverbay_parent_device_name_unique"
             ),
             models.UniqueConstraint(
-                fields=["parent_module", "name"], name="dcim_transceiverport_parent_module_name_unique"
+                fields=["parent_module", "name"], name="dcim_transceiverbay_parent_module_name_unique"
             ),
         ]
 

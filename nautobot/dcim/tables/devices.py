@@ -36,7 +36,7 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
     Transceiver,
-    TransceiverPort,
+    TransceiverBay,
     TransceiverType,
 )
 from nautobot.dcim.utils import cable_status_color_css
@@ -103,7 +103,7 @@ __all__ = (
     "VirtualDeviceContextTable",
     "TransceiverTypeTable",
     "TransceiverTable",
-    "TransceiverPortTable",
+    "TransceiverBayTable",
 )
 
 
@@ -1636,7 +1636,7 @@ class TransceiverTable(StatusTableMixin, RoleTableMixin, BaseTable):
     pk = ToggleColumn()
     transceiver_type = tables.Column(linkify=True)
     phy_specification = tables.Column(accessor="transceiver_type__phy_specification", verbose_name="PHY")
-    parent_transceiver_port = tables.Column(linkify=True)
+    parent_transceiver_bay = tables.Column(linkify=True)
     location = tables.Column(linkify=True)
     tenant = TenantColumn()
     tags = TagColumn(url_name="dcim:transceiver_list")
@@ -1647,7 +1647,7 @@ class TransceiverTable(StatusTableMixin, RoleTableMixin, BaseTable):
             "pk",
             "transceiver_type",
             "phy_specification",
-            "parent_transceiver_port",
+            "parent_transceiver_bay",
             "location",
             "status",
             "role",
@@ -1658,17 +1658,17 @@ class TransceiverTable(StatusTableMixin, RoleTableMixin, BaseTable):
         )
 
 
-class TransceiverPortTable(BaseTable):
+class TransceiverBayTable(BaseTable):
     pk = ToggleColumn()
     parent_device = tables.Column(linkify=True)
     parent_module = tables.Column(linkify=True)
     name = tables.Column(linkify=True, order_by=("_name",))
     installed_transceiver = tables.Column(linkify=True)
     required_form_factor = tables.Column()
-    tags = TagColumn(url_name="dcim:transceiverport_list")
+    tags = TagColumn(url_name="dcim:transceiverbay_list")
 
     class Meta(BaseTable.Meta):
-        model = TransceiverPort
+        model = TransceiverBay
         fields = (
             "pk",
             "parent_device",

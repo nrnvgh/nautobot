@@ -54,8 +54,8 @@ router.register("virtual-chassis", views.VirtualChassisUIViewSet)
 router.register("virtual-device-contexts", views.VirtualDeviceContextUIViewSet)
 router.register("transceiver-types", views.TransceiverTypeUIViewSet)
 router.register("transceivers", views.TransceiverUIViewSet)
-router.register("transceiver-ports", views.TransceiverPortUIViewSet)
-router.register("transceiver-port-templates", views.TransceiverPortTemplateUIViewSet)
+router.register("transceiver-bays", views.TransceiverBayUIViewSet)
+router.register("transceiver-bay-templates", views.TransceiverBayTemplateUIViewSet)
 
 urlpatterns = [
     # Locations
@@ -312,9 +312,16 @@ urlpatterns = [
         name="devicebaytemplate_add",
     ),
     path(
-        "transceiver-port-templates/add/",
-        views.TransceiverPortTemplateCreateView.as_view(),
-        name="transceiverporttemplate_add",
+        "transceiver-bay-templates/add/",
+        views.TransceiverBayTemplateCreateView.as_view(),
+        name="transceiverbaytemplate_add",
+    ),
+    path(
+        "device-types/<uuid:pk>/console-ports-template/add/",
+        RedirectView.as_view(
+            url="/dcim/console-port-templates/add/?device_type=%(pk)s&return_url=/dcim/device-types/%(pk)s/console-ports/"
+        ),
+        name="devicetype_consoleporttemplate_add",
     ),
     path(
         "device-bay-templates/edit/",
@@ -898,16 +905,16 @@ urlpatterns = [
         views.DeviceBulkAddRearPortView.as_view(),
         name="device_bulk_add_rearport",
     ),
-    # Transceiver Ports 
+    # Transceiver Bays
     path(
-        "devices/<uuid:pk>/transceiver-ports/add/",
-        RedirectView.as_view(url="/dcim/transceiver-ports/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/transceiver-ports/"),
-        name="device_transceiverports_add",
+        "devices/<uuid:pk>/transceiver-bays/add/",
+        RedirectView.as_view(url="/dcim/transceiver-bays/add/?device=%(pk)s&return_url=/dcim/devices/%(pk)s/transceiver-bays/"),
+        name="device_transceiverbays_add",
     ),
     path(
-        "transceiver-ports/add/",
-        views.TransceiverPortCreateView.as_view(),
-        name="transceiverport_add",
+        "transceiver-bays/add/",
+        views.TransceiverBayCreateView.as_view(),
+        name="transceiverbay_add",
     ),
     # Device bays
     path("device-bays/", views.DeviceBayListView.as_view(), name="devicebay_list"),

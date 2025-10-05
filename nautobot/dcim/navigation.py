@@ -562,11 +562,11 @@ menu_items = (
                         buttons=(),
                     ),
                     NavMenuItem(
-                        link="dcim:transceiverport_list",
-                        name="Transceiver Ports",
+                        link="dcim:transceiverbay_list",
+                        name="Transceiver Bays",
                         weight=825,
                         permissions=[
-                            "dcim.view_transceiverport",
+                            "dcim.view_transceiverbay",
                         ],
                         buttons=(),
                     ),

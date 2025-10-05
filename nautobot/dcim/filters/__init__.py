@@ -96,37 +96,11 @@ from nautobot.dcim.models import (
     VirtualChassis,
     VirtualDeviceContext,
     Transceiver,
-    TransceiverPort,
     TransceiverType,
-    TransceiverPortTemplate,
+    TransceiverBay,
+    TransceiverBayTemplate,
 )
-
-
-# --- Transceivers: Minimal FilterSets ---
-
-
-class TransceiverTypeFilterSet(BaseFilterSet):
-    class Meta:
-        model = TransceiverType
-        fields = "__all__"
-
-
-class TransceiverFilterSet(BaseFilterSet):
-    class Meta:
-        model = Transceiver
-        fields = "__all__"
-
-
-class TransceiverPortFilterSet(BaseFilterSet):
-    class Meta:
-        model = TransceiverPort
-        fields = "__all__"
-
-
-class TransceiverPortTemplateFilterSet(BaseFilterSet):
-    class Meta:
-        model = TransceiverPortTemplate
-        fields = "__all__"
+  
 from nautobot.extras.filters import (
     LocalContextModelFilterSetMixin,
     NautobotFilterSet,
@@ -2524,3 +2498,30 @@ class ModuleFamilyFilterSet(NautobotFilterSet):
             "module_bay_id",
             "tags",
         ]
+
+# --- Transceivers: Minimal FilterSets ---
+
+
+class TransceiverTypeFilterSet(BaseFilterSet):
+    class Meta:
+        model = TransceiverType
+        fields = "__all__"
+
+
+class TransceiverFilterSet(BaseFilterSet):
+    class Meta:
+        model = Transceiver
+        fields = "__all__"
+
+
+class TransceiverBayFilterSet(BaseFilterSet):
+    class Meta:
+        model = TransceiverBay
+        fields = "__all__"
+
+
+class TransceiverBayTemplateFilterSet(BaseFilterSet):
+    class Meta:
+        model = TransceiverBayTemplate
+        fields = "__all__"
+      

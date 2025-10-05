@@ -37,7 +37,7 @@ from .device_components import (
     DeviceBay,
     FrontPort,
     Interface,
-    TransceiverPort,
+    TransceiverBay,
     ModuleBay,
     PowerOutlet,
     PowerPort,
@@ -51,7 +51,7 @@ __all__ = (
     "FrontPortTemplate",
     "InterfaceTemplate",
     "ModuleBayTemplate",
-    "TransceiverPortTemplate",
+    "TransceiverBayTemplate",
     "PowerOutletTemplate",
     "PowerPortTemplate",
     "RearPortTemplate",
@@ -435,8 +435,8 @@ class FrontPortTemplate(ModularComponentTemplateModel):
 
 
 @extras_features("custom_validators")
-class TransceiverPortTemplate(ModularComponentTemplateModel):
-    """Template for transceiver port on DeviceType/ModuleType."""
+class TransceiverBayTemplate(ModularComponentTemplateModel):
+    """Template for transceiver bay on DeviceType/ModuleType."""
 
     position = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
     label = models.CharField(max_length=CHARFIELD_MAX_LENGTH, blank=True)
@@ -447,12 +447,12 @@ class TransceiverPortTemplate(ModularComponentTemplateModel):
 
     def instantiate(self, device, module=None):
         custom_field_data = {}
-        content_type = ContentType.objects.get_for_model(TransceiverPort)
+        content_type = ContentType.objects.get_for_model(TransceiverBay)
         fields = CustomField.objects.filter(content_types=content_type)
         for field in fields:
             custom_field_data[field.key] = field.default
 
-        return TransceiverPort(
+        return TransceiverBay(
             parent_device=device,
             parent_module=module,
             name=self.name,

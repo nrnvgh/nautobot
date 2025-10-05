@@ -152,8 +152,8 @@ from .models import (
     VirtualDeviceContext,
     TransceiverType,
     Transceiver,
-    TransceiverPort,
-    TransceiverPortTemplate,
+    TransceiverBay,
+    TransceiverBayTemplate,
 )
 
 logger = logging.getLogger(__name__)
@@ -818,12 +818,12 @@ TAB_CONFIGS = [
     ),
     (
         150,
-        "transceiverports",
-        "Transceiver Ports",
-        "dcim:devicetype_transceiverports",
-        "transceiver_port_templates",
-        tables.TransceiverPortTemplateTable,
-        TransceiverPortTemplate,
+        "transceiverbays",
+        "Transceiver Bays",
+        "dcim:devicetype_transceiverbays",
+        "transceiver_bay_templates",
+        tables.TransceiverBayTemplateTable,
+        TransceiverBayTemplate,
     ),
     (
         200,
@@ -913,7 +913,7 @@ ADD_COMPONENTS_CONFIG = [
     (300, "dcim:powerporttemplate_add", "Power Ports", "mdi-power-plug-outline", ["dcim.add_powerporttemplate"]),
     (400, "dcim:poweroutlettemplate_add", "Power Outlets", "mdi-power-socket", ["dcim.add_poweroutlettemplate"]),
     (500, "dcim:interfacetemplate_add", "Interfaces", "mdi-ethernet", ["dcim.add_interfacetemplate"]),
-    (550, "dcim:transceiverporttemplate_add", "Transceiver Ports", "mdi-transit-connection-variant", ["dcim.add_transceiverporttemplate"]),
+    (550, "dcim:transceiverbaytemplate_add", "Transceiver Bays", "mdi-transit-connection-variant", ["dcim.add_transceiverbaytemplate"]),
     (600, "dcim:frontporttemplate_add", "Front Ports", "mdi-square-rounded-outline", ["dcim.add_frontporttemplate"]),
     (700, "dcim:rearporttemplate_add", "Rear Ports", "mdi-square-rounded-outline", ["dcim.add_rearporttemplate"]),
     (800, "dcim:devicebaytemplate_add", "Device Bays", "mdi-circle-outline", ["dcim.add_devicebaytemplate"]),
@@ -1021,12 +1021,11 @@ class DeviceTypeUIViewSet(NautobotUIViewSet):
     @action(
         detail=True,
         methods=["get"],
-        url_path="transceiver-ports",
-        url_name="transceiverports",
+        url_path="transceiver-bays",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["dcim.view_transceiverporttemplate"],
+        custom_view_additional_permissions=["dcim.view_transceiverbaytemplate"],
     )
-    def transceiverports(self, request, *args, **kwargs):
+    def transceiverbays(self, request, *args, **kwargs):
         return Response({})
 
     # View actions
@@ -1663,11 +1662,11 @@ class DeviceBayTemplateCreateView(generic.ComponentCreateView):
     form = forms.DeviceBayTemplateCreateForm
     model_form = forms.DeviceBayTemplateForm
 
-# Transceiver Port Templates
-class TransceiverPortTemplateCreateView(generic.ComponentCreateView):
-    queryset = TransceiverPortTemplate.objects.all()
-    form = forms.TransceiverPortTemplateCreateForm
-    model_form = forms.TransceiverPortTemplateForm
+# Transceiver Bay Templates
+class TransceiverBayTemplateCreateView(generic.ComponentCreateView):
+    queryset = TransceiverBayTemplate.objects.all()
+    form = forms.TransceiverBayTemplateCreateForm
+    model_form = forms.TransceiverBayTemplateForm
 
 
 class DeviceBayTemplateEditView(generic.ObjectEditView):
@@ -2355,10 +2354,10 @@ class DeviceUIViewSet(NautobotUIViewSet):
                     ),
                     object_detail.Button(
                         weight=550,
-                        link_name="dcim:device_transceiverports_add",
-                        label="Transceiver Ports",
+                        link_name="dcim:device_transceiverbays_add",
+                        label="Transceiver Bays",
                         icon="mdi-transit-connection-variant",
-                        required_permissions=["dcim.add_transceiverport"],
+                        required_permissions=["dcim.add_transceiverbay"],
                     ),
                     object_detail.Button(
                         weight=600,
@@ -2530,17 +2529,17 @@ class DeviceUIViewSet(NautobotUIViewSet):
             ),
             object_detail.DistinctViewTab(
                 weight=object_detail.Tab.WEIGHT_CHANGELOG_TAB + 700,
-                tab_id="transceiver_ports",
-                label="Transceiver Ports",
-                url_name="dcim:device_transceiver_ports",
-                related_object_attribute="transceiver_ports",
+                tab_id="transceiver_bays",
+                label="Transceiver Bays",
+                url_name="dcim:device_transceiver_bays",
+                related_object_attribute="transceiver_bays",
                 hide_if_empty=True,
                 panels=(
                     object_detail.ObjectsTablePanel(
                         section=SectionChoices.FULL_WIDTH,
                         weight=100,
-                        table_title="Transceiver Ports",
-                        table_class=tables.TransceiverPortTable,
+                        table_title="Transceiver Bays",
+                        table_class=tables.TransceiverBayTable,
                         table_filter="parent_device",
                         include_paginator=True,
                     ),
@@ -2952,12 +2951,12 @@ class DeviceUIViewSet(NautobotUIViewSet):
 
     @action(
         detail=True,
-        url_path="transceiver-ports",
-        url_name="transceiver_ports",
+        url_path="transceiver-bays",
+        url_name="transceiver_bays",
         custom_view_base_action="view",
-        custom_view_additional_permissions=["dcim.view_transceiverport"],
+        custom_view_additional_permissions=["dcim.view_transceiverbay"],
     )
-    def transceiver_ports(self, request, *args, **kwargs):
+    def transceiver_bays(self, request, *args, **kwargs):
         return Response({})
 
     @action(
@@ -4359,10 +4358,10 @@ class InventoryItemCreateView(generic.ComponentCreateView):
     form = forms.InventoryItemCreateForm
 
 
-class TransceiverPortCreateView(generic.ComponentCreateView):
-    queryset = TransceiverPort.objects.all()
-    form = forms.TransceiverPortCreateForm
-    model_form = forms.TransceiverPortForm
+class TransceiverBayCreateView(generic.ComponentCreateView):
+    queryset = TransceiverBay.objects.all()
+    form = forms.TransceiverBayCreateForm
+    model_form = forms.TransceiverBayForm
     template_name = "dcim/inventoryitem_add.html"
 
 
@@ -5920,7 +5919,7 @@ class TransceiverUIViewSet(NautobotUIViewSet):
                 weight=200,
                 label="Installation Location",
                 fields=(
-                    "parent_transceiver_port",
+                    "parent_transceiver_bay",
                     "location",
                     "device",
                 ),
@@ -5938,14 +5937,14 @@ class TransceiverUIViewSet(NautobotUIViewSet):
     )
 
 
-class TransceiverPortUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.TransceiverPortFilterSet
-    filterset_form_class = forms.TransceiverPortFilterForm
-    form_class = forms.TransceiverPortForm
-    bulk_update_form_class = forms.TransceiverPortBulkEditForm
-    queryset = TransceiverPort.objects.all()
+class TransceiverBayUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.TransceiverBayFilterSet
+    filterset_form_class = forms.TransceiverBayFilterForm
+    form_class = forms.TransceiverBayForm
+    bulk_update_form_class = forms.TransceiverBayBulkEditForm
+    queryset = TransceiverBay.objects.all()
     serializer_class = serializers.NautobotModelSerializer
-    table_class = tables.TransceiverPortTable
+    table_class = tables.TransceiverBayTable
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(
@@ -5974,14 +5973,14 @@ class TransceiverPortUIViewSet(NautobotUIViewSet):
     )
 
 
-class TransceiverPortTemplateUIViewSet(NautobotUIViewSet):
-    filterset_class = filters.TransceiverPortTemplateFilterSet
-    filterset_form_class = forms.TransceiverPortTemplateFilterForm
-    form_class = forms.TransceiverPortTemplateForm
-    bulk_update_form_class = forms.TransceiverPortTemplateBulkEditForm
-    queryset = TransceiverPortTemplate.objects.select_related("device_type", "module_type")
+class TransceiverBayTemplateUIViewSet(NautobotUIViewSet):
+    filterset_class = filters.TransceiverBayTemplateFilterSet
+    filterset_form_class = forms.TransceiverBayTemplateFilterForm
+    form_class = forms.TransceiverBayTemplateForm
+    bulk_update_form_class = forms.TransceiverBayTemplateBulkEditForm
+    queryset = TransceiverBayTemplate.objects.select_related("device_type", "module_type")
     serializer_class = serializers.NautobotModelSerializer
-    table_class = tables.TransceiverPortTemplateTable
+    table_class = tables.TransceiverBayTemplateTable
     object_detail_content = object_detail.ObjectDetailContent(
         panels=(
             object_detail.ObjectFieldsPanel(

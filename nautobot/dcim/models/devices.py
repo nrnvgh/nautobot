@@ -2137,9 +2137,9 @@ class Transceiver(PrimaryModel):
         to="dcim.TransceiverType", on_delete=models.PROTECT, related_name="transceivers"
     )
 
-    # Installation (TransceiverPort OR Location)
-    parent_transceiver_port = models.OneToOneField(
-        to="dcim.TransceiverPort",
+    # Installation (TransceiverBay OR Location)
+    parent_transceiver_bay = models.OneToOneField(
+        to="dcim.TransceiverBay",
         on_delete=models.CASCADE,
         related_name="installed_transceiver",
         blank=True,
@@ -2168,7 +2168,7 @@ class Transceiver(PrimaryModel):
     natural_key_field_names = ["pk"]
 
     class Meta:
-        ordering = ("parent_transceiver_port", "transceiver_type", "asset_tag", "serial")
+        ordering = ("parent_transceiver_bay", "transceiver_type", "asset_tag", "serial")
         constraints = [
             models.UniqueConstraint(
                 fields=["transceiver_type", "serial"], name="dcim_transceiver_transceiver_type_serial_unique"
@@ -2182,17 +2182,17 @@ class Transceiver(PrimaryModel):
 
     @property
     def device(self):
-        """Get parent Device through transceiver port, if installed."""
-        if self.parent_transceiver_port:
-            return self.parent_transceiver_port.parent
+        """Get parent Device through transceiver bay, if installed."""
+        if self.parent_transceiver_bay:
+            return self.parent_transceiver_bay.parent
         return None
 
     def clean(self):
         super().clean()
-        if self.parent_transceiver_port and self.location:
-            raise ValidationError("Only one of parent_transceiver_port or location must be set")
-        if not self.parent_transceiver_port and not self.location:
-            raise ValidationError("Either parent_transceiver_port or location must be set")
+        if self.parent_transceiver_bay and self.location:
+            raise ValidationError("Only one of parent_transceiver_bay or location must be set")
+        if not self.parent_transceiver_bay and not self.location:
+            raise ValidationError("Either parent_transceiver_bay or location must be set")
 
     @property
     def phy_specification(self):

@@ -44,7 +44,7 @@ from .devices import (
     VirtualDeviceContextTable,
     TransceiverTypeTable,
     TransceiverTable,
-    TransceiverPortTable,
+    TransceiverBayTable,
 )
 from .devicetypes import (
     ConsolePortTemplateTable,
@@ -60,7 +60,7 @@ from .devicetypes import (
     PowerOutletTemplateTable,
     PowerPortTemplateTable,
     RearPortTemplateTable,
-    TransceiverPortTemplateTable,
+    TransceiverBayTemplateTable,
 )
 from .locations import LocationTable, LocationTypeTable
 from .power import PowerFeedTable, PowerPanelTable
@@ -135,8 +135,8 @@ __all__ = (
     "VirtualDeviceContextTable",
     "TransceiverTypeTable",
     "TransceiverTable",
-    "TransceiverPortTable",
-    "TransceiverPortTemplateTable",
+    "TransceiverBayTable",
+    "TransceiverBayTemplateTable",
 )
 
 #
