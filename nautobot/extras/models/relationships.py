@@ -88,7 +88,7 @@ class RelationshipModel(models.Model):
         if advanced_ui is not None:
             src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
             dst_relationships = dst_relationships.filter(advanced_ui=advanced_ui)
-        content_type = ContentType.objects.get_for_model(self)
+        content_type = ContentType.objects.get_for_model(self, for_concrete_model=False)
 
         sides = {
             RelationshipSideChoices.SIDE_SOURCE: src_relationships,
@@ -227,6 +227,7 @@ class RelationshipModel(models.Model):
     def get_relationships_with_related_objects(self, include_hidden=False, advanced_ui=None):
         """Alternative version of get_relationships()."""
         src_relationships, dst_relationships = Relationship.objects.get_for_model(self)
+        content_type = ContentType.objects.get_for_model(self, for_concrete_model=False)
 
         if advanced_ui is not None:
             src_relationships = src_relationships.filter(advanced_ui=advanced_ui)
@@ -263,26 +264,38 @@ class RelationshipModel(models.Model):
                 remote_model = remote_ct.model_class()
                 if remote_model is not None:
                     if not relationship.symmetric:
-                        query_params = {
-                            f"{peer_side}_for_associations__relationship": relationship,
-                            f"{peer_side}_for_associations__{side}_id": self.pk,
-                        }
+                        # Do not use reverse GenericRelation joins here. They can bind to the concrete model
+                        # ContentType and miss proxy-typed RelationshipAssociation rows.
+                        association_qs = RelationshipAssociation.objects.filter(
+                            relationship=relationship,
+                            **{
+                                f"{side}_type": content_type,
+                                f"{side}_id": self.pk,
+                                f"{peer_side}_type": remote_ct,
+                            },
+                        )
+                        peer_ids = association_qs.values_list(f"{peer_side}_id", flat=True)
                         # Get the related objects for this relationship on the opposite side.
-                        resp[side][relationship] = remote_model.objects.filter(**query_params).distinct()
+                        resp[side][relationship] = remote_model.objects.filter(pk__in=peer_ids).distinct()
                         if not relationship.has_many(peer_side):
                             resp[side][relationship] = resp[side][relationship].first()
                     else:
-                        side_query_params = {
-                            f"{peer_side}_for_associations__relationship": relationship,
-                            f"{peer_side}_for_associations__{side}_id": self.pk,
-                        }
-                        peer_side_query_params = {
-                            f"{side}_for_associations__relationship": relationship,
-                            f"{side}_for_associations__{peer_side}_id": self.pk,
-                        }
-                        # Get the related objects based on the pks we gathered.
+                        # Symmetric relationships can be stored in either source->destination orientation.
+                        # Query RelationshipAssociation directly and derive the opposite peer id per row
+                        # so proxy-typed associations resolve consistently.
+                        association_qs = RelationshipAssociation.objects.filter(relationship=relationship).filter(
+                            Q(source_type=content_type, source_id=self.pk, destination_type=remote_ct)
+                            | Q(destination_type=content_type, destination_id=self.pk, source_type=remote_ct)
+                        )
+                        peer_ids = []
+                        for source_id, destination_id in association_qs.values_list("source_id", "destination_id"):
+                            if source_id == self.pk:
+                                peer_ids.append(destination_id)
+                            elif destination_id == self.pk:
+                                peer_ids.append(source_id)
+                        # Get the related objects for this symmetric relationship from either association direction.
                         resp[RelationshipSideChoices.SIDE_PEER][relationship] = remote_model.objects.filter(
-                            Q(**side_query_params) | Q(**peer_side_query_params)
+                            pk__in=peer_ids
                         ).distinct()
                         if not relationship.has_many(peer_side):
                             resp[RelationshipSideChoices.SIDE_PEER][relationship] = resp[
@@ -451,19 +464,18 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
             get_queryset (bool): Whether to return a queryset or an object list.
         """
-        concrete_model = model._meta.concrete_model
         cache_key = construct_cache_key(
             self,
             method_name="get_for_model_source",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model._meta.label_lower,
             hidden=hidden,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model_source",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model._meta.label_lower,
             hidden=hidden,
             listing=True,
         )
@@ -473,7 +485,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 return listing
         queryset = cache.get(cache_key)
         if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
+            content_type = ContentType.objects.get_for_model(model, for_concrete_model=False)
             queryset = (
                 self.get_queryset().filter(source_type=content_type).select_related("source_type", "destination_type")
             )  # You almost always will want access to the source_type/destination_type
@@ -497,19 +509,19 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
             hidden (bool): Filter based on the value of the hidden flag, or None to not apply this filter
             get_queryset (bool): Whether to return a queryset or an object list.
         """
-        concrete_model = model._meta.concrete_model
+        model_label = model._meta.label_lower
         cache_key = construct_cache_key(
             self,
             method_name="get_for_model_destination",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_label,
             hidden=hidden,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model_destination",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_label,
             hidden=hidden,
             listing=True,
         )
@@ -519,7 +531,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 return listing
         queryset = cache.get(cache_key)
         if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
+            content_type = ContentType.objects.get_for_model(model, for_concrete_model=False)
             queryset = (
                 self.get_queryset()
                 .filter(destination_type=content_type)
@@ -540,7 +552,7 @@ class RelationshipManager(BaseManager.from_queryset(RestrictedQuerySet)):
         """
         Return a queryset with all required Relationships on the given model.
         """
-        content_type = ContentType.objects.get_for_model(model._meta.concrete_model)
+        content_type = ContentType.objects.get_for_model(model, for_concrete_model=False)
         return self.get_queryset().filter(
             Q(source_type=content_type, required_on=RelationshipRequiredSideChoices.SOURCE_SIDE_REQUIRED)
             | Q(destination_type=content_type, required_on=RelationshipRequiredSideChoices.DESTINATION_SIDE_REQUIRED)

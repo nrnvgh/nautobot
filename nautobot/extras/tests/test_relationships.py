@@ -17,6 +17,7 @@ from nautobot.core.forms import (
 from nautobot.core.tables import RelationshipColumn
 from nautobot.core.testing import create_job_result_and_run_job, TestCase, TransactionTestCase
 from nautobot.core.testing.models import ModelTestCases
+from nautobot.core.tests.proxy_models import ProxyLocation
 from nautobot.core.utils.cache import construct_cache_key
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.dcim.forms import DeviceForm
@@ -51,6 +52,13 @@ from nautobot.extras.models.jobs import JobLogEntry
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup
 from nautobot.virtualization.models import VirtualMachine
 from nautobot.wireless.models import ControllerManagedDeviceGroupWirelessNetworkAssignment
+
+
+class ProxyRelationshipTestMixin:
+    @staticmethod
+    def get_proxy_location_content_type():
+        ContentType.objects.clear_cache()
+        return ContentType.objects.get_for_model(ProxyLocation, for_concrete_model=False)
 
 
 class RelationshipBaseTest:
@@ -196,7 +204,7 @@ class RelationshipBaseTest:
             )
 
 
-class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+class RelationshipTest(ProxyRelationshipTestMixin, RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
     model = Relationship
 
     def test_clean_filter_not_dict(self):
@@ -528,6 +536,27 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
                 with self.assertNumQueries(0):
                     manager_method(Location, get_queryset=False)
 
+    def test_get_for_proxy_model_only_returns_proxy_relationships(self):
+        """Proxy-model lookup should only return relationships registered to proxy content types."""
+        proxy_location_ct = self.get_proxy_location_content_type()
+        proxy_relationship = Relationship.objects.create(
+            label="Proxy Location to VLAN",
+            key="proxy_location_vlan",
+            source_type=proxy_location_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+
+        proxy_source_relationships = Relationship.objects.get_for_model_source(
+            ProxyLocation, get_queryset=False
+        )
+        concrete_source_relationships = Relationship.objects.get_for_model_source(Location, get_queryset=False)
+
+        self.assertIn(proxy_relationship, proxy_source_relationships)
+        self.assertNotIn(self.o2m_1, proxy_source_relationships)
+        self.assertIn(self.o2m_1, concrete_source_relationships)
+        self.assertNotIn(proxy_relationship, concrete_source_relationships)
+
     def test_required_related_object_errors(self):
         """
         Confirm that the fix in https://github.com/nautobot/nautobot/pull/5570 is working as expected
@@ -747,7 +776,7 @@ class RelationshipTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
             form6.save()
 
 
-class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
+class RelationshipAssociationTest(ProxyRelationshipTestMixin, RelationshipBaseTest, ModelTestCases.BaseModelTestCase):
     model = RelationshipAssociation
 
     def setUp(self):
@@ -1134,6 +1163,186 @@ class RelationshipAssociationTest(RelationshipBaseTest, ModelTestCases.BaseModel
                 "value": None,
             },
         )
+
+    def test_get_relationships_data_for_proxy_model_associations(self):
+        """get_relationships_data() on a proxy model should only include proxy-model relationships."""
+        proxy_location_ct = self.get_proxy_location_content_type()
+        proxy_relationship = Relationship.objects.create(
+            label="Proxy Source Location to VLAN",
+            key="proxy_source_location_vlan",
+            source_type=proxy_location_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+        concrete_relationship = Relationship.objects.create(
+            label="Concrete Source Location to VLAN",
+            key="concrete_source_location_vlan",
+            source_type=self.location_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_MANY,
+        )
+        proxy_location = ProxyLocation.objects.get(pk=self.locations[1].pk)
+        proxy_association = RelationshipAssociation.objects.create(
+            relationship=proxy_relationship,
+            source_type=proxy_location_ct,
+            source_id=proxy_location.pk,
+            destination_type=self.vlan_ct,
+            destination_id=self.vlans[0].pk,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=concrete_relationship,
+            source_type=self.location_ct,
+            source_id=proxy_location.pk,
+            destination_type=self.vlan_ct,
+            destination_id=self.vlans[1].pk,
+        )
+
+        data = proxy_location.get_relationships_data()
+
+        self.assertIn(proxy_relationship, data["source"])
+        self.assertNotIn(concrete_relationship, data["source"])
+        self.assertEqual(list(data["source"][proxy_relationship]["queryset"]), [proxy_association])
+
+    def _create_proxy_relationship_and_association(self, proxy_location_model, relationship_type, test_key_suffix):
+        """Build a proxy-scoped relationship and one association for matrix tests."""
+        proxy_location_ct = self.get_proxy_location_content_type()
+        source_proxy_location = proxy_location_model.objects.get(pk=self.locations[1].pk)
+
+        if relationship_type in (
+            RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+            RelationshipTypeChoices.TYPE_MANY_TO_MANY_SYMMETRIC,
+        ):
+            destination_obj = proxy_location_model.objects.get(pk=self.locations[2].pk)
+            destination_content_type = proxy_location_ct
+            destination_side = RelationshipSideChoices.SIDE_PEER
+        else:
+            destination_obj = self.vlans[0]
+            destination_content_type = self.vlan_ct
+            destination_side = RelationshipSideChoices.SIDE_DESTINATION
+
+        proxy_relationship = Relationship.objects.create(
+            label=f"Proxy Matrix {relationship_type}",
+            key=f"proxy_matrix_{test_key_suffix}",
+            source_type=proxy_location_ct,
+            destination_type=destination_content_type,
+            type=relationship_type,
+        )
+        RelationshipAssociation.objects.create(
+            relationship=proxy_relationship,
+            source_type=proxy_location_ct,
+            source_id=source_proxy_location.pk,
+            destination_type=destination_content_type,
+            destination_id=destination_obj.pk,
+        )
+
+        return source_proxy_location, destination_obj, proxy_relationship, destination_side
+
+    def test_get_relationships_data_for_proxy_model_one_to_one_association(self):
+        """Proxy source one-to-one relationship should render the destination value, not an empty field."""
+        proxy_location_ct = self.get_proxy_location_content_type()
+        proxy_relationship = Relationship.objects.create(
+            label="Proxy Source Location to VLAN OneToOne",
+            key="proxy_source_location_vlan_o2o",
+            source_type=proxy_location_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+        )
+        proxy_location = ProxyLocation.objects.get(pk=self.locations[1].pk)
+        RelationshipAssociation.objects.create(
+            relationship=proxy_relationship,
+            source_type=proxy_location_ct,
+            source_id=proxy_location.pk,
+            destination_type=self.vlan_ct,
+            destination_id=self.vlans[0].pk,
+        )
+
+        data = proxy_location.get_relationships_data()
+        relationships = proxy_location.get_relationships_with_related_objects()
+
+        self.assertEqual(data["source"][proxy_relationship]["value"], self.vlans[0])
+        self.assertEqual(relationships["source"][proxy_relationship], self.vlans[0])
+
+    def test_get_relationships_with_related_objects_proxy_source_side_matrix(self):
+        """Proxy source-side resolution should work for all Nautobot relationship types."""
+        relationship_types = [choice for choice, _ in RelationshipTypeChoices.CHOICES]
+        for index, relationship_type in enumerate(relationship_types):
+            with self.subTest(relationship_type=relationship_type):
+                source_obj, destination_obj, relationship, destination_side = (
+                    self._create_proxy_relationship_and_association(
+                        proxy_location_model=ProxyLocation,
+                        relationship_type=relationship_type,
+                        test_key_suffix=f"source_{index}",
+                    )
+                )
+                relationships = source_obj.get_relationships_with_related_objects()
+                result_side = (
+                    RelationshipSideChoices.SIDE_SOURCE
+                    if destination_side == RelationshipSideChoices.SIDE_DESTINATION
+                    else RelationshipSideChoices.SIDE_PEER
+                )
+                self.assertIn(relationship, relationships[result_side])
+                value = relationships[result_side][relationship]
+                has_many = relationship.has_many(destination_side)
+                if has_many:
+                    self.assertIn(destination_obj, list(value))
+                else:
+                    self.assertEqual(value, destination_obj)
+
+    def test_get_relationships_with_related_objects_proxy_opposite_side_matrix(self):
+        """Opposite-side proxy resolution should work for all Nautobot relationship types."""
+        relationship_types = [choice for choice, _ in RelationshipTypeChoices.CHOICES]
+        for index, relationship_type in enumerate(relationship_types):
+            with self.subTest(relationship_type=relationship_type):
+                source_obj, destination_obj, relationship, destination_side = (
+                    self._create_proxy_relationship_and_association(
+                        proxy_location_model=ProxyLocation,
+                        relationship_type=relationship_type,
+                        test_key_suffix=f"opposite_{index}",
+                    )
+                )
+                relationships = destination_obj.get_relationships_with_related_objects()
+                result_side = (
+                    RelationshipSideChoices.SIDE_DESTINATION
+                    if destination_side == RelationshipSideChoices.SIDE_DESTINATION
+                    else RelationshipSideChoices.SIDE_PEER
+                )
+                self.assertIn(relationship, relationships[result_side])
+                value = relationships[result_side][relationship]
+                peer_side = (
+                    RelationshipSideChoices.SIDE_SOURCE
+                    if destination_side == RelationshipSideChoices.SIDE_DESTINATION
+                    else RelationshipSideChoices.SIDE_PEER
+                )
+                has_many = relationship.has_many(peer_side)
+                if has_many:
+                    self.assertIn(source_obj, list(value))
+                else:
+                    self.assertEqual(value, source_obj)
+
+    def test_get_relationships_with_related_objects_for_proxy_source_on_destination_side(self):
+        """One-to-one proxy-source associations should resolve from the concrete destination side."""
+        proxy_location_ct = self.get_proxy_location_content_type()
+        proxy_relationship = Relationship.objects.create(
+            label="Proxy Source Location to VLAN O2O Reverse Detail",
+            key="proxy_source_location_vlan_o2o_reverse_detail",
+            source_type=proxy_location_ct,
+            destination_type=self.vlan_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE,
+        )
+        proxy_location = ProxyLocation.objects.get(pk=self.locations[2].pk)
+        destination_vlan = self.vlans[1]
+        RelationshipAssociation.objects.create(
+            relationship=proxy_relationship,
+            source_type=proxy_location_ct,
+            source_id=proxy_location.pk,
+            destination_type=self.vlan_ct,
+            destination_id=destination_vlan.pk,
+        )
+
+        relationships = destination_vlan.get_relationships_with_related_objects()
+
+        self.assertIn(proxy_relationship, relationships["destination"])
+        self.assertEqual(relationships["destination"][proxy_relationship], proxy_location)
 
     def test_delete_cascade(self):
         """Verify that a RelationshipAssociation is deleted if either of the associated records is deleted."""
