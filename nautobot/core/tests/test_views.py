@@ -29,14 +29,19 @@ from nautobot.core.testing.utils import extract_page_body
 from nautobot.core.utils.lookup import get_filterset_for_model, get_model_from_name
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.views import MessagesView, NautobotMetricsView
-from nautobot.core.views.mixins import GetReturnURLMixin
+from nautobot.core.views.mixins import (
+    BulkEditAndBulkDeleteModelMixin,
+    GetReturnURLMixin,
+    ObjectBulkDestroyViewMixin,
+    ObjectBulkUpdateViewMixin,
+)
 from nautobot.core.views.utils import METRICS_CACHE_KEY
 from nautobot.dcim.models.locations import Location, LocationType
 from nautobot.extras.choices import CustomFieldTypeChoices
 from nautobot.extras.models import FileProxy, SavedView, Status
 from nautobot.extras.models.customfields import CustomField, CustomFieldChoice
 from nautobot.extras.registry import registry
-from nautobot.users.models import ObjectPermission
+from nautobot.users.models import AdminGroup, ObjectPermission
 from nautobot.users.utils import serialize_user_without_config_and_views
 
 
@@ -71,6 +76,163 @@ class GetReturnURLMixinTestCase(TestCase):
         request = self.factory.get("/")
         location = Location.objects.first()
         self.assertEqual(self.mixin.get_return_url(request=request, obj=location), location.get_absolute_url())
+
+
+class ObjectBulkDestroyViewMixinTestCase(TestCase):
+    """Tests for ObjectBulkDestroyViewMixin content-type key-param wiring."""
+
+    def test_bulk_destroy_key_params_use_resolved_content_type(self):
+        """Bulk-destroy key params should use content type resolved from configured for_concrete_model setting."""
+
+        class DummyBulkDestroyView(ObjectBulkDestroyViewMixin):
+            def get_queryset(self):
+                return AdminGroup.objects.all()
+
+        request = RequestFactory().post("/users/groups/delete/", data={"_all": "on"})
+        request.user = self.user
+
+        for use_concrete_model in (True, False):
+            with self.subTest(use_concrete_model=use_concrete_model):
+                view = DummyBulkDestroyView()
+                view.request = request
+                view.content_type_for_concrete_model = use_concrete_model
+                sentinel_ct = object()
+
+                with (
+                    mock.patch.object(
+                        ContentType.objects, "get_for_model", return_value=sentinel_ct
+                    ) as mocked_get_for_model,
+                    mock.patch(
+                        "nautobot.core.views.mixins.get_bulk_queryset_from_view",
+                        return_value=AdminGroup.objects.none(),
+                    ) as mocked_get_bulk_queryset,
+                ):
+                    response = view.perform_bulk_destroy(request)
+
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(mocked_get_bulk_queryset.call_args.kwargs["content_type"], sentinel_ct)
+                mocked_get_for_model.assert_called_once_with(AdminGroup, for_concrete_model=use_concrete_model)
+
+    def test_form_valid_bulk_destroy_path_uses_resolved_content_type(self):
+        """form_valid() with bulk_destroy action should execute _process_bulk_destroy_form() content-type wiring."""
+
+        class DummyBulkDestroyView(ObjectBulkDestroyViewMixin):
+            def get_queryset(self):
+                return AdminGroup.objects.all()
+
+        request = RequestFactory().post("/users/groups/delete/", data={"_all": "on"})
+        request.user = self.user
+
+        for use_concrete_model in (True, False):
+            with self.subTest(use_concrete_model=use_concrete_model):
+                view = DummyBulkDestroyView()
+                view.action = "bulk_destroy"
+                view.request = request
+                view.pk_list = []
+                view.content_type_for_concrete_model = use_concrete_model
+                sentinel_ct = object()
+                model_label = AdminGroup._meta.label
+
+                with (
+                    mock.patch.object(
+                        ContentType.objects, "get_for_model", return_value=sentinel_ct
+                    ) as mocked_get_for_model,
+                    mock.patch(
+                        "nautobot.core.views.mixins.get_bulk_queryset_from_view",
+                        return_value=AdminGroup.objects.none(),
+                    ) as mocked_get_bulk_queryset,
+                    mock.patch(
+                        "nautobot.core.views.mixins.bulk_delete_with_bulk_change_logging",
+                        return_value=(0, {model_label: 0}),
+                    ),
+                    mock.patch("nautobot.core.views.mixins.messages.success"),
+                    mock.patch.object(view, "get_return_url", return_value="/"),
+                ):
+                    response = view.form_valid(form=mock.Mock())
+
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(mocked_get_bulk_queryset.call_args.kwargs["content_type"], sentinel_ct)
+                mocked_get_for_model.assert_called_once_with(AdminGroup, for_concrete_model=use_concrete_model)
+
+
+class ObjectBulkUpdateViewMixinTestCase(TestCase):
+    """Tests for ObjectBulkUpdateViewMixin content-type key-param wiring."""
+
+    def test_bulk_update_key_params_use_resolved_content_type(self):
+        """Bulk-update key params should use content type resolved from configured for_concrete_model setting."""
+
+        class DummyBulkUpdateView(ObjectBulkUpdateViewMixin):
+            def get_form_class(self, **kwargs):
+                return None
+
+            def get_queryset(self):
+                return AdminGroup.objects.all()
+
+        request = RequestFactory().post("/users/groups/edit/", data={"_all": "on"})
+        request.user = self.user
+
+        for use_concrete_model in (True, False):
+            with self.subTest(use_concrete_model=use_concrete_model):
+                view = DummyBulkUpdateView()
+                view.request = request
+                view.content_type_for_concrete_model = use_concrete_model
+                sentinel_ct = object()
+
+                with (
+                    mock.patch.object(
+                        ContentType.objects, "get_for_model", return_value=sentinel_ct
+                    ) as mocked_get_for_model,
+                    mock.patch(
+                        "nautobot.core.views.mixins.get_bulk_queryset_from_view",
+                        return_value=AdminGroup.objects.none(),
+                    ) as mocked_get_bulk_queryset,
+                ):
+                    response = view.perform_bulk_update(request)
+
+                self.assertHttpStatus(response, 200)
+                self.assertEqual(mocked_get_bulk_queryset.call_args.kwargs["content_type"], sentinel_ct)
+                mocked_get_for_model.assert_called_once_with(AdminGroup, for_concrete_model=use_concrete_model)
+
+    def test_form_valid_bulk_update_path_uses_resolved_content_type(self):
+        """form_valid() with bulk_update action should execute _process_bulk_update_form() content-type wiring."""
+
+        class DummyBulkUpdateView(ObjectBulkUpdateViewMixin):
+            def get_queryset(self):
+                return AdminGroup.objects.all()
+
+        request = RequestFactory().post("/users/groups/edit/", data={"_all": "on"})
+        request.user = self.user
+
+        for use_concrete_model in (True, False):
+            with self.subTest(use_concrete_model=use_concrete_model):
+                view = DummyBulkUpdateView()
+                view.action = "bulk_update"
+                view.request = request
+                view.pk_list = []
+                view.content_type_for_concrete_model = use_concrete_model
+                sentinel_ct = object()
+                form = mock.Mock()
+                form.fields = {}
+                form.nullable_fields = []
+                form.cleaned_data = {}
+
+                with (
+                    mock.patch.object(
+                        ContentType.objects, "get_for_model", return_value=sentinel_ct
+                    ) as mocked_get_for_model,
+                    mock.patch(
+                        "nautobot.core.views.mixins.get_bulk_queryset_from_view",
+                        return_value=AdminGroup.objects.none(),
+                    ) as mocked_get_bulk_queryset,
+                    mock.patch("nautobot.core.views.mixins.deferred_change_logging_for_bulk_operation"),
+                    mock.patch("nautobot.core.views.mixins.messages.success"),
+                    mock.patch.object(view, "get_return_url", return_value="/"),
+                ):
+                    response = view.form_valid(form=form)
+
+                self.assertEqual(response.status_code, 302)
+                self.assertEqual(mocked_get_bulk_queryset.call_args.kwargs["content_type"], sentinel_ct)
+                mocked_get_for_model.assert_called_once_with(AdminGroup, for_concrete_model=use_concrete_model)
 
 
 class HomeViewTestCase(TestCase):

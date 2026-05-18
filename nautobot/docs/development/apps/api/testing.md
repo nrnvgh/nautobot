@@ -26,6 +26,23 @@ class MyTestCase(TestCase):
 
 The context manager normalizes queries by replacing quoted string literals and `IN (...)` clauses with placeholders, so queries that differ only in their parameter values are counted together. If a violation is detected, the test fails with a message showing the offending query pattern(s), their repetition counts, and the total number of queries.
 
+## Testing Proxy-Model Viewsets
+
+If your app model is a Django proxy model, keep runtime and test behavior aligned:
+
+- Set `content_type_for_concrete_model = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
+- For UI viewsets, see [Proxy Models and Bulk Operations](views/nautobotuiviewset.md#proxy-models-and-bulk-operations).
+- For generic view tests based on `ModelViewTestCase`/`ViewTestCases`, set the same class attribute on the test class.
+
+```python
+from nautobot.apps.testing import ViewTestCases
+
+
+class ProxyModelViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
+    model = YourAppProxyModel
+    content_type_for_concrete_model = False
+```
+
 ## Factories
 
 The [`TEST_USE_FACTORIES`](../../../user-guide/administration/configuration/settings.md#test_use_factories) setting defaults to `False` when testing apps, primarily for backwards-compatibility reasons. It can prove a useful way of populating a baseline of Nautobot database data for your tests and save you the trouble of creating a large amount of baseline data yourself. We recommend adding [`factory-boy`](https://pypi.org/project/factory-boy/) to your app's development dependencies and settings `TEST_USE_FACTORIES = True` in your app's development/test `nautobot_config.py` to take advantage of this.

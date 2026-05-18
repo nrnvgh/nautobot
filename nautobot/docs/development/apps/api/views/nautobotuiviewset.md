@@ -63,6 +63,26 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
 !!! note
     Using a field other than the default `pk` or the alternative field `slug` (as shown in the example above), may result in certain pieces of the UI not displaying (for example, the edit and delete buttons on the object detail view). This is due to the URL expecting a named key of slug or pk, rather than id.
 
+## Proxy Models and Bulk Operations
+
+Set `content_type_for_concrete_model = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
+
+By default, `NautobotUIViewSet` mixins use concrete-model content types:
+
+```python
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    content_type_for_concrete_model = True  # default
+```
+
+For proxy-model viewsets, override:
+
+```python
+class YourAppModelUIViewSet(NautobotUIViewSet):
+    content_type_for_concrete_model = False
+```
+
+For test guidance, see [Testing Proxy-Model Viewsets](../testing.md#testing-proxy-model-viewsets).
+
 ## View Template Context
 
 Templates can benefit from a very rich context passed down from the views and renderer, including forms, tables, as well as any other information that may be helpful for rendering templates. The keys it provides are as follows:

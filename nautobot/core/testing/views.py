@@ -104,6 +104,11 @@ class ModelViewTestCase(ModelTestCase):
 
     If unspecified, "pk" and "slug" will be tried, in that order.
     """
+    # Preserve current behavior by default; proxy model tests can override to False.
+    content_type_for_concrete_model = True
+
+    def _get_model_content_type(self):
+        return ContentType.objects.get_for_model(self.model, for_concrete_model=self.content_type_for_concrete_model)
 
     def _get_base_url(self):
         """
@@ -265,7 +270,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Try GET to permitted object
             response = self.client.get(instance1.get_absolute_url())
@@ -286,7 +291,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             response = self.client.get(instance.get_absolute_url())
 
@@ -368,7 +373,7 @@ class ViewTestCases:
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             response = self.client.get(instance.get_absolute_url())
             self.assertBodyContains(response, f"{instance.get_absolute_url()}#advanced")
@@ -632,7 +637,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Try GET with object-level permission
             self.assertHttpStatus(self.client.get(self._get_url("add")), 200)
@@ -772,7 +777,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Try GET with a permitted object
             self.assertHttpStatus(self.client.get(self._get_url("edit", instance1)), 200)
@@ -919,7 +924,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Try GET with a permitted object
             self.assertHttpStatus(self.client.get(self._get_url("delete", instance1)), 200)
@@ -1317,7 +1322,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Try GET with object-level permission
             # HTMX request for the table content should succeed and contain relevant contents
@@ -1343,7 +1348,7 @@ class ViewTestCases:
                         reverse(
                             "extras:job_run_by_class_path", kwargs={"class_path": "nautobot.core.jobs.ImportObjects"}
                         )
-                        + f"?content_type={ContentType.objects.get_for_model(self.model).pk}"
+                        + f"?content_type={self._get_model_content_type().pk}"
                     ),
                     content,
                 )
@@ -1367,7 +1372,7 @@ class ViewTestCases:
             obj_perm = users_models.ObjectPermission(name="Test permission", actions=["view"])
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Try GET with model-level permission
             response = self.client.get(self._get_url("list"))
@@ -1441,7 +1446,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Attempt to make the request with unmet constraints
             self.assertHttpStatus(self.client.post(**request), 200)
@@ -1670,7 +1675,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Build form data
             data = {
@@ -1806,7 +1811,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Attempt to bulk delete non-permitted objects
             self.assertHttpStatus(self.client.post(self._get_url("bulk_delete"), data), 302)
@@ -1912,7 +1917,7 @@ class ViewTestCases:
             )
             obj_perm.save()
             obj_perm.users.add(self.user)
-            obj_perm.object_types.add(ContentType.objects.get_for_model(self.model))
+            obj_perm.object_types.add(self._get_model_content_type())
 
             # Attempt to bulk rename permitted objects into a non-permitted state
             response = self.client.post(self._get_url("bulk_rename"), data, follow=True)

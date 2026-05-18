@@ -1161,6 +1161,8 @@ class BulkEditAndBulkDeleteModelMixin:
     """
 
     logger = logging.getLogger(__name__)
+    # Keep concrete model behavior by default; proxy-based viewsets can override to False.
+    content_type_for_concrete_model = True
 
     def send_bulk_delete_objects_to_job(self, request):
         """Prepare and enqueue bulk delete job."""
@@ -1247,7 +1249,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": ContentType.objects.get_for_model(
+                model, for_concrete_model=self.content_type_for_concrete_model
+            ),
             "delete_all": delete_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,
@@ -1289,7 +1293,9 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         saved_view_id = request.GET.get("saved_view", "")
         data = {}
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": ContentType.objects.get_for_model(
+                model, for_concrete_model=self.content_type_for_concrete_model
+            ),
             "delete_all": delete_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,
@@ -1401,7 +1407,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": ContentType.objects.get_for_model(
+                model, for_concrete_model=self.content_type_for_concrete_model
+            ),
             "edit_all": edit_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,
@@ -1503,7 +1511,9 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": ContentType.objects.get_for_model(
+                model, for_concrete_model=self.content_type_for_concrete_model
+            ),
             "edit_all": edit_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": self.pk_list,

@@ -210,7 +210,7 @@ class NautobotHTMLRenderer(renderers.BrowsableAPIRenderer):
         queryset = view.alter_queryset(request)
         model = queryset.model
         form_class = view.get_form_class()
-        content_type = ContentType.objects.get_for_model(model)
+        content_type = ContentType.objects.get_for_model(model, for_concrete_model=False)
         form = None
         table = None
         instance = None
