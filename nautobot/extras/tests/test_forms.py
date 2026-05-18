@@ -8,6 +8,7 @@ from django.db.models import Q
 from django.forms import ChoiceField, MultipleChoiceField
 from django.test import override_settings, TestCase
 
+from nautobot.core.tests.proxy_models import ProxyLocation
 from nautobot.dcim.forms import DeviceForm, LocationBulkEditForm, LocationForm
 import nautobot.dcim.models as dcim_models
 from nautobot.dcim.models import Device, Location, LocationType
@@ -37,6 +38,11 @@ import nautobot.ipam.models as ipam_models
 
 # Use the proper swappable User model
 User = get_user_model()
+
+
+class ProxyLocationForm(LocationForm):
+    class Meta(LocationForm.Meta):
+        model = ProxyLocation
 
 
 class JobHookFormTestCase(TestCase):
@@ -733,6 +739,83 @@ class RelationshipModelFormTestCase(TestCase):
             "Object Device 1 cannot form a relationship to itself!",
             form.errors[f"cr_{self.relationship_3.key}__peer"][0],
         )
+
+    def test_proxy_symmetric_relationship_form_uses_proxy_content_type(self):
+        """Proxy form saves symmetric relationships with proxy source/destination content types."""
+        ContentType.objects.clear_cache()
+        proxy_location_ct = ContentType.objects.get_for_model(ProxyLocation, for_concrete_model=False)
+        proxy_locations = list(
+            ProxyLocation.objects.filter(location_type=LocationType.objects.get(name="Campus")).order_by("pk")[:2]
+        )
+        self.assertEqual(len(proxy_locations), 2)
+        proxy_location_1, proxy_location_2 = proxy_locations
+
+        relationship = Relationship.objects.create(
+            label="Proxy Location Peer",
+            key="proxy_location_peer",
+            source_type=proxy_location_ct,
+            destination_type=proxy_location_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+
+        form = ProxyLocationForm(
+            instance=proxy_location_1,
+            data={
+                "name": proxy_location_1.name,
+                "location_type": proxy_location_1.location_type.pk,
+                "status": proxy_location_1.status.pk,
+                f"cr_{relationship.key}__peer": proxy_location_2.pk,
+            },
+        )
+        self.assertEqual(form.obj_type, proxy_location_ct)
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertTrue(form.save())
+
+        association = RelationshipAssociation.objects.get(
+            relationship=relationship,
+            source_id__in=[proxy_location_1.pk, proxy_location_2.pk],
+            destination_id__in=[proxy_location_1.pk, proxy_location_2.pk],
+        )
+        self.assertEqual(association.source_type, proxy_location_ct)
+        self.assertEqual(association.destination_type, proxy_location_ct)
+
+    def test_concrete_form_with_proxy_instance_uses_relationship_content_type(self):
+        """Concrete model form editing a proxy instance should still save proxy relationship content types."""
+        ContentType.objects.clear_cache()
+        proxy_location_ct = ContentType.objects.get_for_model(ProxyLocation, for_concrete_model=False)
+        proxy_locations = list(
+            ProxyLocation.objects.filter(location_type=LocationType.objects.get(name="Campus")).order_by("pk")[:2]
+        )
+        self.assertEqual(len(proxy_locations), 2)
+        proxy_location_1, proxy_location_2 = proxy_locations
+
+        relationship = Relationship.objects.create(
+            label="Proxy Location Peer 2",
+            key="proxy_location_peer_2",
+            source_type=proxy_location_ct,
+            destination_type=proxy_location_ct,
+            type=RelationshipTypeChoices.TYPE_ONE_TO_ONE_SYMMETRIC,
+        )
+
+        form = LocationForm(
+            instance=proxy_location_1,
+            data={
+                "name": proxy_location_1.name,
+                "location_type": proxy_location_1.location_type.pk,
+                "status": proxy_location_1.status.pk,
+                f"cr_{relationship.key}__peer": proxy_location_2.pk,
+            },
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        self.assertTrue(form.save())
+
+        association = RelationshipAssociation.objects.get(
+            relationship=relationship,
+            source_id__in=[proxy_location_1.pk, proxy_location_2.pk],
+            destination_id__in=[proxy_location_1.pk, proxy_location_2.pk],
+        )
+        self.assertEqual(association.source_type, proxy_location_ct)
+        self.assertEqual(association.destination_type, proxy_location_ct)
 
 
 class RelationshipModelBulkEditFormMixinTestCase(TestCase):

@@ -501,7 +501,7 @@ class RelationshipModelBulkEditFormMixin(BulkEditForm):
 
 class RelationshipModelFormMixin(forms.ModelForm):
     def __init__(self, *args, **kwargs):
-        self.obj_type = ContentType.objects.get_for_model(self._meta.model)
+        self.obj_type = ContentType.objects.get_for_model(self._meta.model, for_concrete_model=False)
         self.relationships = []
         super().__init__(*args, **kwargs)
 
@@ -611,22 +611,28 @@ class RelationshipModelFormMixin(forms.ModelForm):
         """Update RelationshipAssociations for all Relationships on form save."""
 
         for field_name in self.relationships:
+            relationship = self.fields[field_name].model
             # The field name tells us the side of the relationship that it is providing peer objects(s) to link into.
             peer_side = field_name.split("__")[-1]
             # Based on the side of the relationship that our local object represents,
             # find the list of existing RelationshipAssociations it already has for this Relationship.
             side = RelationshipSideChoices.OPPOSITE[peer_side]
             filters = {
-                "relationship": self.fields[field_name].model,
+                "relationship": relationship,
             }
             if side != RelationshipSideChoices.SIDE_PEER:
-                filters.update({f"{side}_type": self.obj_type, f"{side}_id": self.instance.pk})
+                filters.update(
+                    {
+                        f"{side}_type": getattr(relationship, f"{side}_type"),
+                        f"{side}_id": self.instance.pk,
+                    }
+                )
                 existing_associations = RelationshipAssociation.objects.filter(**filters)
             else:
                 existing_associations = RelationshipAssociation.objects.filter(
                     (
-                        Q(source_type=self.obj_type, source_id=self.instance.pk)
-                        | Q(destination_type=self.obj_type, destination_id=self.instance.pk)
+                        Q(source_type=relationship.source_type, source_id=self.instance.pk)
+                        | Q(destination_type=relationship.destination_type, destination_id=self.instance.pk)
                     ),
                     **filters,
                 )
@@ -666,12 +672,11 @@ class RelationshipModelFormMixin(forms.ModelForm):
 
             # Anything remaining in target_peer_ids now does not exist yet and needs to be created.
             for peer_id in target_peer_ids:
-                relationship = self.fields[field_name].model
                 if not relationship.symmetric:
                     association = RelationshipAssociation(  # pylint: disable=repeated-keyword
                         relationship=relationship,
                         **{
-                            f"{side}_type": self.obj_type,
+                            f"{side}_type": getattr(relationship, f"{side}_type"),
                             f"{side}_id": self.instance.pk,
                             f"{peer_side}_type": getattr(relationship, f"{peer_side}_type"),
                             f"{peer_side}_id": peer_id,
@@ -681,9 +686,9 @@ class RelationshipModelFormMixin(forms.ModelForm):
                     # Symmetric association - source/destination are interchangeable
                     association = RelationshipAssociation(
                         relationship=relationship,
-                        source_type=self.obj_type,
+                        source_type=relationship.source_type,
                         source_id=self.instance.pk,
-                        destination_type=self.obj_type,  # since this is a symmetric relationship this is OK
+                        destination_type=relationship.destination_type,
                         destination_id=peer_id,
                     )
 
