@@ -95,7 +95,7 @@ class ObjectBulkDestroyViewMixinTestCase(TestCase):
             with self.subTest(use_concrete_model=use_concrete_model):
                 view = DummyBulkDestroyView()
                 view.request = request
-                view.content_type_for_concrete_model = use_concrete_model
+                view.use_concrete_content_type = use_concrete_model
                 sentinel_ct = object()
 
                 with (
@@ -129,7 +129,7 @@ class ObjectBulkDestroyViewMixinTestCase(TestCase):
                 view.action = "bulk_destroy"
                 view.request = request
                 view.pk_list = []
-                view.content_type_for_concrete_model = use_concrete_model
+                view.use_concrete_content_type = use_concrete_model
                 sentinel_ct = object()
                 model_label = AdminGroup._meta.label
 
@@ -175,7 +175,7 @@ class ObjectBulkUpdateViewMixinTestCase(TestCase):
             with self.subTest(use_concrete_model=use_concrete_model):
                 view = DummyBulkUpdateView()
                 view.request = request
-                view.content_type_for_concrete_model = use_concrete_model
+                view.use_concrete_content_type = use_concrete_model
                 sentinel_ct = object()
 
                 with (
@@ -209,7 +209,7 @@ class ObjectBulkUpdateViewMixinTestCase(TestCase):
                 view.action = "bulk_update"
                 view.request = request
                 view.pk_list = []
-                view.content_type_for_concrete_model = use_concrete_model
+                view.use_concrete_content_type = use_concrete_model
                 sentinel_ct = object()
                 form = mock.Mock()
                 form.fields = {}

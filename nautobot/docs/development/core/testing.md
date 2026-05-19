@@ -184,7 +184,7 @@ for sql in ctx.captured_queries:
 
 For proxy-model behavior, keep runtime and test content-type resolution aligned:
 
-- Set `content_type_for_concrete_model = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
+- Set `use_concrete_content_type = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
 - Runtime bulk edit/delete behavior is documented in [Proxy Models and Bulk Operations](../apps/api/views/nautobotuiviewset.md#proxy-models-and-bulk-operations).
 - Generic view tests built on `nautobot.core.testing.views.ModelViewTestCase` can set the same class attribute on the test class.
 
@@ -194,5 +194,5 @@ from nautobot.core.testing.views import ModelViewTestCase
 
 class ProxyModelPermissionsTestCase(ModelViewTestCase):
     model = YourProxyModel
-    content_type_for_concrete_model = False
+    use_concrete_content_type = False
 ```

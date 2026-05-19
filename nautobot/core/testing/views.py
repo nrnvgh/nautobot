@@ -105,10 +105,10 @@ class ModelViewTestCase(ModelTestCase):
     If unspecified, "pk" and "slug" will be tried, in that order.
     """
     # Preserve current behavior by default; proxy model tests can override to False.
-    content_type_for_concrete_model = True
+    use_concrete_content_type = True
 
     def _get_model_content_type(self):
-        return ContentType.objects.get_for_model(self.model, for_concrete_model=self.content_type_for_concrete_model)
+        return ContentType.objects.get_for_model(self.model, for_concrete_model=self.use_concrete_content_type)
 
     def _get_base_url(self):
         """

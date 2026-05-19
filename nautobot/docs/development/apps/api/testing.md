@@ -30,7 +30,7 @@ The context manager normalizes queries by replacing quoted string literals and `
 
 If your app model is a Django proxy model, keep runtime and test behavior aligned:
 
-- Set `content_type_for_concrete_model = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
+- Set `use_concrete_content_type = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
 - For UI viewsets, see [Proxy Models and Bulk Operations](views/nautobotuiviewset.md#proxy-models-and-bulk-operations).
 - For generic view tests based on `ModelViewTestCase`/`ViewTestCases`, set the same class attribute on the test class.
 
@@ -40,7 +40,7 @@ from nautobot.apps.testing import ViewTestCases
 
 class ProxyModelViewTestCase(ViewTestCases.PrimaryObjectViewTestCase):
     model = YourAppProxyModel
-    content_type_for_concrete_model = False
+    use_concrete_content_type = False
 ```
 
 ## Factories

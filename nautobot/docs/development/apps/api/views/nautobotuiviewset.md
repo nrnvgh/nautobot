@@ -65,20 +65,20 @@ class YourAppModelUIViewSet(NautobotUIViewSet):
 
 ## Proxy Models and Bulk Operations
 
-Set `content_type_for_concrete_model = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
+Set `use_concrete_content_type = False` when proxy-model bulk edit/delete and related object-permission checks should use proxy content types instead of concrete-model content types.
 
 By default, `NautobotUIViewSet` mixins use concrete-model content types:
 
 ```python
 class YourAppModelUIViewSet(NautobotUIViewSet):
-    content_type_for_concrete_model = True  # default
+    use_concrete_content_type = True  # default
 ```
 
 For proxy-model viewsets, override:
 
 ```python
 class YourAppModelUIViewSet(NautobotUIViewSet):
-    content_type_for_concrete_model = False
+    use_concrete_content_type = False
 ```
 
 For test guidance, see [Testing Proxy-Model Viewsets](../testing.md#testing-proxy-model-viewsets).

@@ -1162,7 +1162,7 @@ class BulkEditAndBulkDeleteModelMixin:
 
     logger = logging.getLogger(__name__)
     # Keep concrete model behavior by default; proxy-based viewsets can override to False.
-    content_type_for_concrete_model = True
+    use_concrete_content_type = True
 
     def send_bulk_delete_objects_to_job(self, request):
         """Prepare and enqueue bulk delete job."""
@@ -1250,7 +1250,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
 
         self.key_params = {
             "content_type": ContentType.objects.get_for_model(
-                model, for_concrete_model=self.content_type_for_concrete_model
+                model, for_concrete_model=self.use_concrete_content_type
             ),
             "delete_all": delete_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
@@ -1294,7 +1294,7 @@ class ObjectBulkDestroyViewMixin(NautobotViewSetMixin, BulkDestroyModelMixin, Bu
         data = {}
         self.key_params = {
             "content_type": ContentType.objects.get_for_model(
-                model, for_concrete_model=self.content_type_for_concrete_model
+                model, for_concrete_model=self.use_concrete_content_type
             ),
             "delete_all": delete_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
@@ -1408,7 +1408,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
 
         self.key_params = {
             "content_type": ContentType.objects.get_for_model(
-                model, for_concrete_model=self.content_type_for_concrete_model
+                model, for_concrete_model=self.use_concrete_content_type
             ),
             "edit_all": edit_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
@@ -1512,7 +1512,7 @@ class ObjectBulkUpdateViewMixin(NautobotViewSetMixin, BulkUpdateModelMixin, Bulk
 
         self.key_params = {
             "content_type": ContentType.objects.get_for_model(
-                model, for_concrete_model=self.content_type_for_concrete_model
+                model, for_concrete_model=self.use_concrete_content_type
             ),
             "edit_all": edit_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),

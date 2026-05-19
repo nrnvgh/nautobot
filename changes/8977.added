@@ -1,0 +1,3 @@
+Added proxy-aware content-type handling to bulk edit/delete workflows.
+Fixed list-view content-type resolution so the proxy model "Add" button targets the proxy model.
+Updated relationship read paths to resolve proxy-associated rows consistently across relationship types.
