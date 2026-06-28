@@ -38,7 +38,7 @@ menu_items = (
                     ),
                     NavMenuItem(
                         link="plugins:example_app:proxyexamplemodel_list",
-                        name="Proxy Examples",
+                        name="Proxy Example Models",
                         permissions=["example_app.view_proxyexamplemodel"],
                         buttons=(
                             NavMenuAddButton(

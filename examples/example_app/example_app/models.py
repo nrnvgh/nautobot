@@ -43,8 +43,6 @@ class ProxyExampleModel(ExampleModel):
 
     class Meta:
         proxy = True
-        verbose_name = "Proxy Example"
-        verbose_name_plural = "Proxy Examples"
 
 
 @extras_features(
