@@ -30,6 +30,7 @@ from nautobot.core.testing import (
 )
 from nautobot.core.testing.utils import get_deletable_objects, post_data
 from nautobot.core.ui.object_detail import _JobModalButton
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.dcim.choices import InterfaceDuplexChoices, InterfaceModeChoices, InterfaceTypeChoices
 from nautobot.dcim.models import (
@@ -110,7 +111,12 @@ from nautobot.extras.registry import registry
 from nautobot.extras.templatetags.job_buttons import NO_CONFIRM_BUTTON
 from nautobot.extras.tests.constants import BIG_GRAPHQL_DEVICE_QUERY
 from nautobot.extras.tests.test_jobs import get_job_class_and_model
-from nautobot.extras.utils import get_pending_approval_workflow_stages, RoleModelsQuery, TaggableClassesQuery
+from nautobot.extras.utils import (
+    FeatureQuery,
+    get_pending_approval_workflow_stages,
+    RoleModelsQuery,
+    TaggableClassesQuery,
+)
 from nautobot.ipam.models import IPAddress, Prefix, VLAN, VLANGroup, VRF
 from nautobot.tenancy.models import Tenant
 from nautobot.users.models import ObjectPermission
@@ -3158,6 +3164,52 @@ class ExportTemplateTestCase(
             "mime_type": "application/json",
             "file_extension": "json",
         }
+
+
+@tag("example_app")
+class ProxyModelExportTemplateTestCase(TestCase):
+    """Verify export template ContentType resolution honors the proxy model `for_concrete_model` policy (issue #8977)."""
+
+    def setUp(self):
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        self.example_model = ExampleModel
+        self.proxy_model = ProxyExampleModel
+        self.concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        self.proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+
+        self.concrete_template = ExportTemplate.objects.create(
+            name="concrete-export-template",
+            template_code="concrete {{ obj.name }}",
+            content_type=self.concrete_ct,
+        )
+        self.proxy_template = ExportTemplate.objects.create(
+            name="proxy-export-template",
+            template_code="proxy {{ obj.name }}",
+            content_type=self.proxy_ct,
+        )
+
+    def test_export_template_resolution_honors_proxy_policy(self):
+        """The content_type the views resolve for a proxy model selects only the proxy's templates."""
+        self.assertNotEqual(self.proxy_ct, self.concrete_ct)
+        self.assertEqual(get_content_type_for_model(self.proxy_model), self.proxy_ct)
+        self.assertEqual(get_content_type_for_model(self.example_model), self.concrete_ct)
+
+        proxy_templates = set(ExportTemplate.objects.filter(content_type=get_content_type_for_model(self.proxy_model)))
+        concrete_templates = set(
+            ExportTemplate.objects.filter(content_type=get_content_type_for_model(self.example_model))
+        )
+
+        self.assertIn(self.proxy_template, proxy_templates)
+        self.assertNotIn(self.concrete_template, proxy_templates)
+        self.assertIn(self.concrete_template, concrete_templates)
+        self.assertNotIn(self.proxy_template, concrete_templates)
+
+    def test_proxy_content_type_is_selectable_for_export_templates(self):
+        """The proxy ContentType is offered as a write-side choice via FeatureQuery."""
+        choice_pks = {pk for _, pk in FeatureQuery("export_templates").get_choices()}
+        self.assertIn(self.proxy_ct.pk, choice_pks)
+        self.assertIn(self.concrete_ct.pk, choice_pks)
 
 
 class ExternalIntegrationTestCase(ViewTestCases.PrimaryObjectViewTestCase):

@@ -6,7 +6,6 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import AnonymousUser
-from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import (
     ObjectDoesNotExist,
     ValidationError,
@@ -42,6 +41,7 @@ from nautobot.core.forms import (
 from nautobot.core.forms.forms import DynamicFilterFormSet
 from nautobot.core.templatetags.helpers import validated_viewname
 from nautobot.core.utils.config import get_settings_or_config
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.lookup import get_route_for_model
 from nautobot.core.utils.permissions import get_permission_for_model
 from nautobot.core.utils.requests import (
@@ -126,7 +126,7 @@ class ObjectView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
         """
         instance = get_object_or_404(self.queryset, **kwargs)
         model = self.queryset.model
-        content_type = ContentType.objects.get_for_model(self.queryset.model)
+        content_type = get_content_type_for_model(model)
         context = {
             "object": instance,
             "content_type": content_type,
@@ -232,7 +232,7 @@ class ObjectListView(UIComponentsMixin, ObjectPermissionRequiredMixin, View):
 
     def get(self, request):
         model = self.queryset.model
-        content_type = ContentType.objects.get_for_model(model)
+        content_type = get_content_type_for_model(model)
 
         filter_params = request.GET
         user = request.user
@@ -1110,7 +1110,7 @@ class BulkEditView(
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": get_content_type_for_model(model),
             "edit_all": edit_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": pk_list,
@@ -1318,7 +1318,7 @@ class BulkDeleteView(
         saved_view_id = request.GET.get("saved_view", "")
 
         self.key_params = {
-            "content_type": ContentType.objects.get_for_model(model),
+            "content_type": get_content_type_for_model(model),
             "delete_all": delete_all,
             "filter_query_params": convert_querydict_to_dict(request.GET),
             "pk_list": pk_list,
