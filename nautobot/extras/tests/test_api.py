@@ -1018,6 +1018,48 @@ class ComputedFieldTest(APIViewTestCases.APIViewTestCase):
         self.assertIn("computed_fields", response.json())
 
 
+@tag("example_app")
+class ProxyModelComputedFieldTest(APITestCase):
+    """Tests for proxy-aware computed-field context in object API responses."""
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_computed_fields_honor_proxy_policy_when_included(self):
+        """Object API responses include computed fields for the resolved proxy ContentType."""
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+        concrete_computed_field = ComputedField.objects.create(
+            key="concrete_api_computed_field",
+            label="Concrete API Computed Field",
+            template="{{ obj.name }}",
+            content_type=concrete_ct,
+        )
+        proxy_computed_field = ComputedField.objects.create(
+            key="proxy_api_computed_field",
+            label="Proxy API Computed Field",
+            template="{{ obj.name }}",
+            content_type=proxy_ct,
+        )
+
+        concrete_object = ExampleModel.objects.create(name="concrete-computed-api-object", number=1)
+        proxy_object = ProxyExampleModel.objects.create(name="proxy-computed-api-object", number=2)
+
+        concrete_url = reverse("plugins-api:example_app-api:examplemodel-detail", kwargs={"pk": concrete_object.pk})
+        proxy_url = reverse("plugins-api:example_app-api:proxyexamplemodel-detail", kwargs={"pk": proxy_object.pk})
+
+        params = {"include": "computed_fields"}
+        concrete_response = self.client.get(concrete_url, data=params, **self.header)
+        proxy_response = self.client.get(proxy_url, data=params, **self.header)
+
+        self.assertHttpStatus(concrete_response, status.HTTP_200_OK)
+        self.assertHttpStatus(proxy_response, status.HTTP_200_OK)
+        self.assertIn(concrete_computed_field.key, concrete_response.data["computed_fields"])
+        self.assertNotIn(proxy_computed_field.key, concrete_response.data["computed_fields"])
+        self.assertIn(proxy_computed_field.key, proxy_response.data["computed_fields"])
+        self.assertNotIn(concrete_computed_field.key, proxy_response.data["computed_fields"])
+
+
 class ConfigContextTest(APIViewTestCases.APIViewTestCase):
     model = ConfigContext
     bulk_update_data = {
@@ -1647,6 +1689,41 @@ class CustomFieldTest(APIViewTestCases.APIViewTestCase):
         self.assertIsInstance(response.data, dict)
         # cf1 should be always visible in API response
         self.assertIn("cf1", response.data["custom_fields"])
+
+
+@tag("example_app")
+class ProxyModelCustomFieldTest(APITestCase):
+    """Tests for proxy-aware custom-field context in object API responses."""
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_custom_fields_honor_proxy_policy(self):
+        """Object API responses include custom fields for the resolved proxy ContentType."""
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+        concrete_cf = CustomField(key="concrete_api_cf", label="Concrete API CF", type="text")
+        concrete_cf.validated_save()
+        concrete_cf.content_types.set([concrete_ct])
+        proxy_cf = CustomField(key="proxy_api_cf", label="Proxy API CF", type="text")
+        proxy_cf.validated_save()
+        proxy_cf.content_types.set([proxy_ct])
+
+        concrete_object = ExampleModel.objects.create(name="concrete-api-object", number=1)
+        proxy_object = ProxyExampleModel.objects.create(name="proxy-api-object", number=2)
+
+        concrete_url = reverse("plugins-api:example_app-api:examplemodel-detail", kwargs={"pk": concrete_object.pk})
+        proxy_url = reverse("plugins-api:example_app-api:proxyexamplemodel-detail", kwargs={"pk": proxy_object.pk})
+
+        concrete_response = self.client.get(concrete_url, **self.header)
+        proxy_response = self.client.get(proxy_url, **self.header)
+
+        self.assertHttpStatus(concrete_response, status.HTTP_200_OK)
+        self.assertHttpStatus(proxy_response, status.HTTP_200_OK)
+        self.assertIn(concrete_cf.key, concrete_response.data["custom_fields"])
+        self.assertNotIn(proxy_cf.key, concrete_response.data["custom_fields"])
+        self.assertIn(proxy_cf.key, proxy_response.data["custom_fields"])
+        self.assertNotIn(concrete_cf.key, proxy_response.data["custom_fields"])
 
 
 class CustomLinkTest(APIViewTestCases.APIViewTestCase):

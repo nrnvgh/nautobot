@@ -1,7 +1,7 @@
 from django import template
-from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html_join
 
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.extras.models import ComputedField
 
 register = template.Library()
@@ -12,7 +12,7 @@ def has_computed_fields(context, obj):
     """
     Return a boolean value indicating if an object's content type has associated computed fields.
     """
-    content_type = ContentType.objects.get_for_model(obj)
+    content_type = get_content_type_for_model(obj)
     return ComputedField.objects.filter(content_type=content_type).exists()
 
 

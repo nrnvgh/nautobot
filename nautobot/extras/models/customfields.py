@@ -39,6 +39,7 @@ from nautobot.core.models.validators import validate_regex
 from nautobot.core.settings_funcs import is_truthy
 from nautobot.core.templatetags.helpers import render_markdown
 from nautobot.core.utils.cache import construct_cache_key
+from nautobot.core.utils.contenttypes import get_content_type_for_model, resolve_for_concrete_model
 from nautobot.core.utils.data import render_jinja2, validate_jinja2
 from nautobot.core.utils.filtering import build_filter_dict_from_filterset
 from nautobot.core.utils.lookup import get_filterset_for_model
@@ -53,18 +54,24 @@ logger = logging.getLogger(__name__)
 class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, get_queryset=True):
+    def get_for_model(self, model, get_queryset=True, for_concrete_model=None):
         """
         Return all ComputedFields assigned to the given model.
 
         Returns a queryset by default, or a list if `get_queryset` param is False.
+
+        By default the ContentType is resolved using the model's `for_concrete_model` policy, so proxy
+        models with `for_concrete_model = False` resolve to their own ContentType. Pass `for_concrete_model`
+        to override the policy explicitly.
         """
-        concrete_model = model._meta.concrete_model
+        model = model if isinstance(model, type) else model.__class__
+        resolved_for_concrete_model = resolve_for_concrete_model(model, for_concrete_model=for_concrete_model)
+        model_for_cache = model._meta.concrete_model if resolved_for_concrete_model else model
         cache_key = construct_cache_key(
-            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+            self, method_name="get_for_model", branch_aware=True, model=model_for_cache._meta.label_lower
         )
         list_cache_key = construct_cache_key(
-            self, method_name="get_for_model", branch_aware=True, model=concrete_model._meta.label_lower, listing=True
+            self, method_name="get_for_model", branch_aware=True, model=model_for_cache._meta.label_lower, listing=True
         )
         if not get_queryset:
             listing = cache.get(list_cache_key)
@@ -72,7 +79,7 @@ class ComputedFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 return listing
         queryset = cache.get(cache_key)
         if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
+            content_type = get_content_type_for_model(model, for_concrete_model=resolved_for_concrete_model)
             queryset = self.get_queryset().filter(content_type=content_type)
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             cache.set(cache_key, queryset, timeout=None)
@@ -444,7 +451,7 @@ class CustomFieldModel(models.Model):
 class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
     use_in_migrations = True
 
-    def get_for_model(self, model, exclude_filter_disabled=False, get_queryset=True):
+    def get_for_model(self, model, exclude_filter_disabled=False, get_queryset=True, for_concrete_model=None):
         """
         Return (and cache) all CustomFields assigned to the given model.
 
@@ -452,20 +459,24 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             model (Model): The django model to which custom fields are registered
             exclude_filter_disabled (bool): Exclude any custom fields which have filter logic disabled
             get_queryset (bool): Whether to return a QuerySet or a list.
+            for_concrete_model (bool): Optional override of the model's `for_concrete_model` ContentType policy.
+                By default proxy models with `for_concrete_model = False` resolve to their own ContentType.
         """
-        concrete_model = model._meta.concrete_model
+        model = model if isinstance(model, type) else model.__class__
+        resolved_for_concrete_model = resolve_for_concrete_model(model, for_concrete_model=for_concrete_model)
+        model_for_cache = model._meta.concrete_model if resolved_for_concrete_model else model
         cache_key = construct_cache_key(
             self,
             method_name="get_for_model",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_for_cache._meta.label_lower,
             exclude_filter_disabled=exclude_filter_disabled,
         )
         list_cache_key = construct_cache_key(
             self,
             method_name="get_for_model",
             branch_aware=True,
-            model=concrete_model._meta.label_lower,
+            model=model_for_cache._meta.label_lower,
             exclude_filter_disabled=exclude_filter_disabled,
             listing=True,
         )
@@ -475,7 +486,7 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
                 return listing
         queryset = cache.get(cache_key)
         if queryset is None:
-            content_type = ContentType.objects.get_for_model(concrete_model)
+            content_type = get_content_type_for_model(model, for_concrete_model=resolved_for_concrete_model)
             queryset = self.get_queryset().filter(content_types=content_type)
             if exclude_filter_disabled:
                 queryset = queryset.exclude(filter_logic=CustomFieldFilterLogicChoices.FILTER_DISABLED)
@@ -488,15 +499,19 @@ class CustomFieldManager(BaseManager.from_queryset(RestrictedQuerySet)):
             return listing
         return queryset
 
-    def keys_for_model(self, model):
+    def keys_for_model(self, model, for_concrete_model=None):
         """Return list of all keys for CustomFields assigned to the given model."""
-        concrete_model = model._meta.concrete_model
+        model = model if isinstance(model, type) else model.__class__
+        resolved_for_concrete_model = resolve_for_concrete_model(model, for_concrete_model=for_concrete_model)
+        model_for_cache = model._meta.concrete_model if resolved_for_concrete_model else model
         cache_key = construct_cache_key(
-            self, method_name="keys_for_model", branch_aware=True, model=concrete_model._meta.label_lower
+            self, method_name="keys_for_model", branch_aware=True, model=model_for_cache._meta.label_lower
         )
         keys = cache.get(cache_key)
         if keys is None:
-            keys = list(self.get_for_model(model).values_list("key", flat=True))
+            keys = list(
+                self.get_for_model(model, for_concrete_model=resolved_for_concrete_model).values_list("key", flat=True)
+            )
             # cache is explicitly invalidated by nautobot.extras.signals.invalidate_models_cache
             cache.set(cache_key, keys, timeout=None)
         return keys

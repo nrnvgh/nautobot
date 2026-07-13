@@ -2555,6 +2555,98 @@ class ProxyModelCustomLinkRenderingTestCase(TestCase):
         self.assertNotIn("PROXY", concrete_rendered)
 
 
+@tag("example_app")
+class ProxyModelCustomFieldRenderingTestCase(TestCase):
+    """Verify proxy-assigned custom fields render on the detail and list/table views (issue #8977)."""
+
+    def setUp(self):
+        super().setUp()
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        self.proxy_model = ProxyExampleModel
+        self.concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        self.proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+
+        self.concrete_cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, key="concrete_render_cf", label="Concrete Render CF"
+        )
+        self.concrete_cf.content_types.set([self.concrete_ct])
+        self.proxy_cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, key="proxy_render_cf", label="Proxy Render CF"
+        )
+        self.proxy_cf.content_types.set([self.proxy_ct])
+
+        self.proxy_obj = ProxyExampleModel.objects.create(name="proxy-cf-render", number=1)
+        self.proxy_obj._custom_field_data = {self.proxy_cf.key: "PROXYCFVALUE"}
+        self.proxy_obj.validated_save()
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_renders_proxy_custom_field(self):
+        """The proxy object's detail page shows its own custom field and not the concrete model's."""
+        response = self.client.get(self.proxy_obj.get_absolute_url(), follow=True)
+        self.assertBodyContains(response, self.proxy_cf.label)
+        self.assertBodyContains(response, "PROXYCFVALUE")
+        self.assertBodyContains(response, self.concrete_cf.label, count=0)
+
+    def test_table_view_renders_proxy_custom_field(self):
+        """The proxy list table injects the proxy custom-field column and renders its value."""
+        from example_app.tables import ProxyExampleModelTable
+
+        table = ProxyExampleModelTable(self.proxy_model.objects.filter(pk=self.proxy_obj.pk))
+        self.assertIn(self.proxy_cf.add_prefix_to_cf_key(), table.base_columns)
+        self.assertNotIn(self.concrete_cf.add_prefix_to_cf_key(), table.base_columns)
+
+        rendered_value = table.rows[0].get_cell(self.proxy_cf.add_prefix_to_cf_key())  # pylint: disable=no-member
+        self.assertIn("PROXYCFVALUE", rendered_value)
+
+
+@tag("example_app")
+class ProxyModelComputedFieldRenderingTestCase(TestCase):
+    """Verify proxy-assigned computed fields render on the detail and list/table views (issue #8977)."""
+
+    def setUp(self):
+        super().setUp()
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        self.proxy_model = ProxyExampleModel
+        self.concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        self.proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+
+        self.concrete_computed_field = ComputedField.objects.create(
+            content_type=self.concrete_ct,
+            key="concrete_render_computed",
+            label="Concrete Render Computed",
+            template="CONCRETE {{ obj.name }}",
+        )
+        self.proxy_computed_field = ComputedField.objects.create(
+            content_type=self.proxy_ct,
+            key="proxy_render_computed",
+            label="Proxy Render Computed",
+            template="PROXY {{ obj.name }}",
+        )
+
+        self.proxy_obj = ProxyExampleModel.objects.create(name="proxy-computed-render", number=1)
+
+    @override_settings(EXEMPT_VIEW_PERMISSIONS=["*"])
+    def test_detail_view_renders_proxy_computed_field(self):
+        """The proxy object's detail page renders its own computed field and not the concrete model's."""
+        response = self.client.get(self.proxy_obj.get_absolute_url(), follow=True)
+        self.assertBodyContains(response, self.proxy_computed_field.label)
+        self.assertBodyContains(response, f"PROXY {self.proxy_obj.name}")
+        self.assertBodyContains(response, self.concrete_computed_field.label, count=0)
+
+    def test_table_view_renders_proxy_computed_field(self):
+        """The proxy list table injects the proxy computed-field column and renders its value."""
+        from example_app.tables import ProxyExampleModelTable
+
+        table = ProxyExampleModelTable(self.proxy_model.objects.filter(pk=self.proxy_obj.pk))
+        self.assertIn(f"cpf_{self.proxy_computed_field.key}", table.base_columns)
+        self.assertNotIn(f"cpf_{self.concrete_computed_field.key}", table.base_columns)
+
+        rendered_value = table.rows[0].get_cell(f"cpf_{self.proxy_computed_field.key}")  # pylint: disable=no-member
+        self.assertIn(f"PROXY {self.proxy_obj.name}", rendered_value)
+
+
 class DynamicGroupTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,

@@ -32,6 +32,7 @@ from nautobot.core.exceptions import CeleryWorkerNotRunningException
 from nautobot.core.graphql import execute_saved_query
 from nautobot.core.models.querysets import count_related
 from nautobot.core.templatetags.perms import can_cancel
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.extras import filters
 from nautobot.extras.choices import ApprovalWorkflowStateChoices, JobExecutionType, JobQueueTypeChoices
 from nautobot.extras.filters import RoleFilterSet
@@ -242,7 +243,7 @@ class CustomFieldModelViewSet(ModelViewSet):
 
     def get_serializer_context(self):
         # Gather all custom fields for the model
-        content_type = ContentType.objects.get_for_model(self.queryset.model)
+        content_type = get_content_type_for_model(self.queryset.model)
         custom_fields = content_type.custom_fields.all()
 
         context = super().get_serializer_context()

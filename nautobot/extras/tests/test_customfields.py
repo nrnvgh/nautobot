@@ -42,6 +42,7 @@ from nautobot.extras.customfields import (
 )
 from nautobot.extras.models import ComputedField, CustomField, CustomFieldChoice, Status
 from nautobot.extras.signals import handle_cf_removed_obj_types
+from nautobot.extras.utils import FeatureQuery
 from nautobot.users.models import ObjectPermission
 from nautobot.virtualization.models import VirtualMachine
 
@@ -827,6 +828,153 @@ class ComputedFieldManagerTestCase(TestCase):
         self.assertIsInstance(listing, list)
         self.assertEqual(1, len(listing))
         self.assertQuerySetEqualAndNotEmpty(qs, listing)
+
+
+@tag("example_app")
+class ProxyModelCustomFieldManagerTestCase(TestCase):
+    """
+    Verify CustomField ContentType resolution honors the proxy model `for_concrete_model`
+    policy so a `for_concrete_model = False` proxy resolves to its own ContentType instead of
+    the concrete model's (issue #8977).
+    """
+
+    def setUp(self):
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        self.example_model = ExampleModel
+        self.proxy_model = ProxyExampleModel
+        self.concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        self.proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+
+        self.concrete_cf = CustomField.objects.create(
+            type=CustomFieldTypeChoices.TYPE_TEXT, label="Concrete Example CF"
+        )
+        self.concrete_cf.content_types.set([self.concrete_ct])
+        self.proxy_cf = CustomField.objects.create(type=CustomFieldTypeChoices.TYPE_TEXT, label="Proxy Example CF")
+        self.proxy_cf.content_types.set([self.proxy_ct])
+
+    def test_custom_field_get_for_model_honors_proxy_policy(self):
+        """CustomField.get_for_model resolves the proxy ContentType for a `for_concrete_model = False` proxy."""
+        self.assertNotEqual(self.proxy_ct, self.concrete_ct)
+
+        concrete_fields = set(CustomField.objects.get_for_model(self.example_model))
+        proxy_fields = set(CustomField.objects.get_for_model(self.proxy_model))
+
+        self.assertIn(self.concrete_cf, concrete_fields)
+        self.assertNotIn(self.proxy_cf, concrete_fields)
+        self.assertIn(self.proxy_cf, proxy_fields)
+        self.assertNotIn(self.concrete_cf, proxy_fields)
+
+    def test_custom_field_get_for_model_override(self):
+        """Passing `for_concrete_model` explicitly overrides the proxy's policy."""
+        proxy_as_concrete = set(CustomField.objects.get_for_model(self.proxy_model, for_concrete_model=True))
+        self.assertIn(self.concrete_cf, proxy_as_concrete)
+        self.assertNotIn(self.proxy_cf, proxy_as_concrete)
+
+    def test_custom_field_get_for_model_listing_honors_proxy_policy(self):
+        """The cached `get_queryset=False` listing path keys on the resolved (proxy vs concrete) ContentType."""
+        concrete_listing = CustomField.objects.get_for_model(self.example_model, get_queryset=False)
+        proxy_listing = CustomField.objects.get_for_model(self.proxy_model, get_queryset=False)
+
+        self.assertIsInstance(concrete_listing, list)
+        self.assertIsInstance(proxy_listing, list)
+        self.assertIn(self.concrete_cf, concrete_listing)
+        self.assertNotIn(self.proxy_cf, concrete_listing)
+        self.assertIn(self.proxy_cf, proxy_listing)
+        self.assertNotIn(self.concrete_cf, proxy_listing)
+
+    def test_custom_field_keys_for_model_honors_proxy_policy(self):
+        self.assertIn(self.proxy_cf.key, CustomField.objects.keys_for_model(self.proxy_model))
+        self.assertNotIn(self.concrete_cf.key, CustomField.objects.keys_for_model(self.proxy_model))
+        self.assertIn(self.concrete_cf.key, CustomField.objects.keys_for_model(self.example_model))
+        self.assertNotIn(self.proxy_cf.key, CustomField.objects.keys_for_model(self.example_model))
+
+    def test_custom_field_keys_for_model_override(self):
+        """Passing `for_concrete_model` explicitly overrides the proxy's policy for keys_for_model."""
+        proxy_as_concrete_keys = CustomField.objects.keys_for_model(self.proxy_model, for_concrete_model=True)
+        self.assertIn(self.concrete_cf.key, proxy_as_concrete_keys)
+        self.assertNotIn(self.proxy_cf.key, proxy_as_concrete_keys)
+
+    def test_proxy_content_type_is_selectable_for_custom_fields(self):
+        """The proxy ContentType is offered as a write-side choice via FeatureQuery."""
+        choice_pks = {pk for _, pk in FeatureQuery("custom_fields").get_choices()}
+        self.assertIn(self.proxy_ct.pk, choice_pks)
+        self.assertIn(self.concrete_ct.pk, choice_pks)
+
+
+@tag("example_app")
+class ProxyModelComputedFieldManagerTestCase(TestCase):
+    """
+    Verify ComputedField ContentType resolution honors the proxy model `for_concrete_model`
+    policy so a `for_concrete_model = False` proxy resolves to its own ContentType instead of
+    the concrete model's (issue #8977).
+    """
+
+    def setUp(self):
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        self.example_model = ExampleModel
+        self.proxy_model = ProxyExampleModel
+        self.concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        self.proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+
+        self.concrete_computed_field = ComputedField.objects.create(
+            content_type=self.concrete_ct,
+            key="concrete_example_computed_field",
+            label="Concrete Example Computed Field",
+            template="{{ obj.name }}",
+        )
+        self.proxy_computed_field = ComputedField.objects.create(
+            content_type=self.proxy_ct,
+            key="proxy_example_computed_field",
+            label="Proxy Example Computed Field",
+            template="{{ obj.name }}",
+        )
+
+    def test_computed_field_get_for_model_honors_proxy_policy(self):
+        self.assertNotEqual(self.proxy_ct, self.concrete_ct)
+
+        concrete_fields = set(ComputedField.objects.get_for_model(self.example_model))
+        proxy_fields = set(ComputedField.objects.get_for_model(self.proxy_model))
+
+        self.assertIn(self.concrete_computed_field, concrete_fields)
+        self.assertNotIn(self.proxy_computed_field, concrete_fields)
+        self.assertIn(self.proxy_computed_field, proxy_fields)
+        self.assertNotIn(self.concrete_computed_field, proxy_fields)
+
+    def test_computed_field_get_for_model_override(self):
+        """Passing `for_concrete_model` explicitly overrides the proxy's policy for ComputedField."""
+        proxy_as_concrete = set(ComputedField.objects.get_for_model(self.proxy_model, for_concrete_model=True))
+        self.assertIn(self.concrete_computed_field, proxy_as_concrete)
+        self.assertNotIn(self.proxy_computed_field, proxy_as_concrete)
+
+    def test_computed_field_get_for_model_listing_honors_proxy_policy(self):
+        """The cached `get_queryset=False` listing path keys on the resolved (proxy vs concrete) ContentType."""
+        concrete_listing = ComputedField.objects.get_for_model(self.example_model, get_queryset=False)
+        proxy_listing = ComputedField.objects.get_for_model(self.proxy_model, get_queryset=False)
+
+        self.assertIsInstance(concrete_listing, list)
+        self.assertIsInstance(proxy_listing, list)
+        self.assertIn(self.concrete_computed_field, concrete_listing)
+        self.assertNotIn(self.proxy_computed_field, concrete_listing)
+        self.assertIn(self.proxy_computed_field, proxy_listing)
+        self.assertNotIn(self.concrete_computed_field, proxy_listing)
+
+    def test_has_computed_fields_templatetag_honors_proxy_policy(self):
+        """The has_computed_fields templatetag resolves the proxy ContentType."""
+        from nautobot.extras.templatetags.computed_fields import has_computed_fields
+
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        concrete_object = ExampleModel.objects.create(name="concrete-computed-object", number=1)
+        proxy_object = ProxyExampleModel.objects.create(name="proxy-computed-object", number=2)
+
+        self.assertTrue(has_computed_fields({}, proxy_object))
+
+        self.proxy_computed_field.delete()
+
+        self.assertTrue(has_computed_fields({}, concrete_object))
+        self.assertFalse(has_computed_fields({}, proxy_object))
 
 
 @tag("example_app")
