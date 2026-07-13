@@ -1,10 +1,10 @@
 from collections import OrderedDict
 
 from django import template
-from django.contrib.contenttypes.models import ContentType
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 
+from nautobot.core.utils.contenttypes import get_content_type_for_model
 from nautobot.core.utils.data import render_jinja2
 from nautobot.extras.models import CustomLink
 
@@ -27,7 +27,7 @@ def custom_links(context, obj):
     """
     Render all applicable links for the given object.
     """
-    content_type = ContentType.objects.get_for_model(obj)
+    content_type = get_content_type_for_model(obj)
     links = CustomLink.objects.filter(content_type=content_type)
     if not links:
         return ""

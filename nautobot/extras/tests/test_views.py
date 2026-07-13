@@ -2508,6 +2508,47 @@ class CustomLinkRenderingTestCase(TestCase):
         self.assertIn("&lt;script&gt;alert", content, content)
 
 
+@tag("example_app")
+class ProxyModelCustomLinkRenderingTestCase(TestCase):
+    """Verify custom link rendering honors the proxy model `for_concrete_model` policy (issue #8977)."""
+
+    def test_custom_links_templatetag_honors_proxy_policy(self):
+        from nautobot.extras.templatetags.custom_links import custom_links
+
+        from example_app.models import ExampleModel, ProxyExampleModel
+
+        concrete_ct = ContentType.objects.get_for_model(ExampleModel)
+        proxy_ct = ContentType.objects.get_for_model(ProxyExampleModel, for_concrete_model=False)
+        self.assertNotEqual(concrete_ct, proxy_ct)
+
+        CustomLink.objects.create(
+            content_type=concrete_ct,
+            name="concrete-link",
+            text="CONCRETE {{ obj.name }}",
+            target_url="http://example.com/concrete/{{ obj.name }}",
+            new_window=False,
+        )
+        CustomLink.objects.create(
+            content_type=proxy_ct,
+            name="proxy-link",
+            text="PROXY {{ obj.name }}",
+            target_url="http://example.com/proxy/{{ obj.name }}",
+            new_window=False,
+        )
+
+        concrete_obj = ExampleModel.objects.create(name="concrete-obj", number=1)
+        proxy_obj = ProxyExampleModel.objects.create(name="proxy-obj", number=2)
+        context = {"request": None, "user": None, "perms": None, "debug": False}
+
+        proxy_rendered = custom_links(context, proxy_obj)
+        self.assertIn("PROXY proxy-obj", proxy_rendered)
+        self.assertNotIn("CONCRETE", proxy_rendered)
+
+        concrete_rendered = custom_links(context, concrete_obj)
+        self.assertIn("CONCRETE concrete-obj", concrete_rendered)
+        self.assertNotIn("PROXY", concrete_rendered)
+
+
 class DynamicGroupTestCase(
     ViewTestCases.CreateObjectViewTestCase,
     ViewTestCases.DeleteObjectViewTestCase,
